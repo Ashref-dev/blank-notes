@@ -5,6 +5,29 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Note Not Found</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        mauve: {
+                            50: '#faf8ff',
+                            100: '#f4f1fe',
+                            200: '#e9e5fd',
+                            300: '#d9d0fb',
+                            400: '#c4b2f7',
+                            500: '#a688f1',
+                            600: '#9064e8',
+                            700: '#7c4ddb',
+                            800: '#6941c6',
+                            900: '#553c9a',
+                            950: '#372560',
+                        },
+                    },
+                }
+            }
+        }
+    </script>
 </head>
 <body class="bg-gray-50 text-gray-900 font-mono">
     <div class="min-h-screen flex items-center justify-center">
@@ -12,8 +35,8 @@
             <h1 class="text-4xl font-bold text-gray-900 mb-4">404</h1>
             <h2 class="text-xl font-medium text-gray-700 mb-4">Shared note not found</h2>
             <p class="text-gray-500 mb-8">The note you're looking for doesn't exist or has been removed.</p>
-            <a href="/" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200">
-                Go to blank.page
+            <a href="/" class="bg-mauve-600 hover:bg-mauve-700 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 hover:shadow-lg hover:shadow-mauve-500/25">
+                Go to blank.ashref.tn
             </a>
         </div>
     </div>

@@ -214,11 +214,11 @@ function getNoteTitleFromContent(content) {
 
 function createFirstNote() {
     currentNoteId = generateNoteId();
-    const defaultContent = 'Welcome to Blank.page\n\nStart typing to create your first note...';
+    const defaultContent = 'Welcome to blank.ashref.tn\n\nStart typing to create your first note...';
     
     const note = {
         id: currentNoteId,
-        title: 'Welcome to Blank.page',
+        title: 'Welcome to blank.ashref.tn',
         content: defaultContent,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
@@ -590,6 +590,18 @@ function closeShareModal() {
     modal.classList.add('hidden');
 }
 
+// About modal functions
+function showAboutModal() {
+    const modal = document.getElementById('about-modal');
+    modal.classList.remove('hidden');
+    closeMoreOptions(); // Close the menu when opening modal
+}
+
+function closeAboutModal() {
+    const modal = document.getElementById('about-modal');
+    modal.classList.add('hidden');
+}
+
 // Copy functionality
 function copyNoteContent() {
     if (!currentNoteId || !notes[currentNoteId]) {
@@ -794,6 +806,7 @@ function setupEventListeners() {
             closePageSelector();
             closeMoreOptions();
             closeShareModal();
+            closeAboutModal();
         }
     });
 }
@@ -867,4 +880,6 @@ window.uploadFile = uploadFile;
 window.downloadNote = downloadNote;
 window.printNote = printNote;
 window.deleteCurrentNote = deleteCurrentNote;
+window.showAboutModal = showAboutModal;
+window.closeAboutModal = closeAboutModal;
 

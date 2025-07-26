@@ -15,7 +15,22 @@
                 extend: {
                     fontFamily: {
                         'cousine': ['Cousine', 'monospace'],
-                    }
+                    },
+                    colors: {
+                        mauve: {
+                            50: '#faf8ff',
+                            100: '#f4f1fe',
+                            200: '#e9e5fd',
+                            300: '#d9d0fb',
+                            400: '#c4b2f7',
+                            500: '#a688f1',
+                            600: '#9064e8',
+                            700: '#7c4ddb',
+                            800: '#6941c6',
+                            900: '#553c9a',
+                            950: '#372560',
+                        },
+                    },
                 }
             }
         }
@@ -28,12 +43,14 @@
             <div class="flex items-center justify-between">
                 <div>
                     <h1 class="text-2xl font-bold text-gray-900 dark:text-white">{{.title}}</h1>
-                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Shared on {{.date}}</p>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                        Shared from <span class="font-medium text-mauve-600 dark:text-mauve-400">blank.ashref.tn</span> on {{.date}}
+                    </p>
                 </div>
                 <div class="flex items-center gap-4">
                     <button 
                         onclick="toggleTheme()"
-                        class="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors duration-200">
+                        class="p-2 text-gray-600 dark:text-gray-400 hover:text-mauve-600 dark:hover:text-mauve-400 transition-colors duration-200 rounded-lg hover:bg-mauve-50 dark:hover:bg-mauve-900/20">
                         <svg class="w-5 h-5 dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
                         </svg>
@@ -43,7 +60,7 @@
                     </button>
                     <button 
                         onclick="copyContent()"
-                        class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200">
+                        class="flex items-center gap-2 bg-mauve-600 hover:bg-mauve-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 hover:shadow-lg hover:shadow-mauve-500/25">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
                         </svg>
@@ -62,7 +79,7 @@
     </main>
 
     <!-- Toast notification -->
-    <div id="toast" class="hidden fixed bottom-4 right-4 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 px-4 py-2 rounded-lg shadow-lg z-50 transition-opacity duration-300">
+    <div id="toast" class="hidden fixed bottom-4 right-4 bg-mauve-800 text-white px-4 py-2 rounded-lg shadow-lg z-50 transition-opacity duration-300">
         Content copied to clipboard
     </div>
 

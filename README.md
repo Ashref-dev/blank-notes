@@ -1,4 +1,4 @@
-# Blank.page - Minimalist Note Taking App
+# blank.ashref.tn - Minimalist Note Taking App
 
 A modern, elegant note-taking application with a local-first approach. Built with Go (Gin) backend and vanilla JavaScript frontend. Features instant local storage for notes with optional cloud sharing via PostgreSQL.
 

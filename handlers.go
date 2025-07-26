@@ -123,7 +123,7 @@ func getSharedNoteHandler(c *gin.Context) {
 // Handlers
 func indexHandler(c *gin.Context) {
 	c.HTML(http.StatusOK, "index.html", gin.H{
-		"title": "Blank.page",
+		"title": "blank.ashref.tn",
 	})
 }
 

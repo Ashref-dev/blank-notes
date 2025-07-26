@@ -6,34 +6,34 @@
 
     <!-- Primary Meta Tags -->
     <title>{{.title}}</title>
-    <meta name="title" content="Blank.page - Minimalist Note Taking" />
+    <meta name="title" content="blank.ashref.tn - Minimalist Note Taking" />
     <meta
       name="description"
       content="A modern, elegant note-taking app with a local-first approach. Write instantly, save automatically, and share when needed. Clean, distraction-free writing environment."
     />
     <meta
       name="keywords"
-      content="notes, writing, minimalist, note-taking, local-first, text editor, markdown, sharing"
+      content="notes, writing, minimalist, note-taking, local-first, text editor, sharing"
     />
     <meta name="author" content="Ashref" />
 
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://blank.ashref.tn/" />
-    <meta property="og:title" content="Blank.page - Minimalist Note Taking" />
+    <meta property="og:title" content="blank.ashref.tn - Minimalist Note Taking" />
     <meta
       property="og:description"
       content="A modern, elegant note-taking app with a local-first approach. Write instantly, save automatically, and share when needed."
     />
     <meta property="og:image" content="https://blank.ashref.tn/static/og.jpg" />
-    <meta property="og:site_name" content="Blank.page" />
+    <meta property="og:site_name" content="blank.ashref.tn" />
 
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image" />
     <meta property="twitter:url" content="https://blank.ashref.tn/" />
     <meta
       property="twitter:title"
-      content="Blank.page - Minimalist Note Taking"
+      content="blank.ashref.tn - Minimalist Note Taking"
     />
     <meta
       property="twitter:description"
@@ -68,12 +68,12 @@
     <!-- Android -->
     <meta name="theme-color" content="#9064e8" />
     <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="application-name" content="Blank.page" />
+    <meta name="application-name" content="blank.ashref.tn" />
 
     <!-- iOS -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <meta name="apple-mobile-web-app-title" content="Blank.page" />
+    <meta name="apple-mobile-web-app-title" content="blank.ashref.tn" />
 
     <!-- Microsoft -->
     <meta name="msapplication-TileColor" content="#9064e8" />
@@ -128,7 +128,7 @@
     >
       <div class="w-full px-8 py-4">
         <div class="flex justify-between items-center">
-          <!-- Left: Site Title and Page Selector -->
+          <!-- Left: Site Title/Logo and Note Selector -->
           <div class="flex items-center gap-6">
             <!-- Site Title/Logo -->
             <div class="flex items-center gap-2">
@@ -194,171 +194,143 @@
                 </div>
               </div>
             </div>
+          </div>
 
-            <!-- Right: Actions -->
-            <div class="flex items-center gap-3">
-              <!-- Word Count -->
+          <!-- Right: Word Count and Actions -->
+          <div class="flex items-center gap-4">
+            <!-- Word Count -->
+            <div
+              id="word-count"
+              class="text-sm text-gray-500 dark:text-gray-400 px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-800/50"
+            >
+              0 words, 0 chars
+            </div>
+
+            <!-- Copy Button -->
+            <button
+              onclick="copyNoteContent()"
+              title="Copy note content"
+              class="p-2 text-gray-600 dark:text-gray-400 hover:text-mauve-600 dark:hover:text-mauve-400 transition-all duration-200 rounded-lg hover:bg-mauve-50 dark:hover:bg-mauve-900/20"
+            >
+              <svg
+                class="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                ></path>
+              </svg>
+            </button>
+
+            <!-- Import Button -->
+            <button
+              onclick="uploadFile()"
+              title="Import file"
+              class="p-2 text-gray-600 dark:text-gray-400 hover:text-mauve-600 dark:hover:text-mauve-400 transition-all duration-200 rounded-lg hover:bg-mauve-50 dark:hover:bg-mauve-900/20"
+            >
+              <svg
+                class="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                ></path>
+              </svg>
+            </button>
+
+            <!-- Share Button -->
+            <button
+              onclick="shareCurrentNote()"
+              title="Share note"
+              class="flex items-center gap-2 bg-mauve-600 hover:bg-mauve-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 hover:shadow-lg hover:shadow-mauve-500/25"
+            >
+              <svg
+                class="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z"
+                ></path>
+              </svg>
+              Share
+            </button>
+
+            <!-- More Options Menu -->
+            <div class="relative">
+              <button
+                onclick="toggleMoreOptions()"
+                title="More options"
+                class="p-2 text-gray-600 dark:text-gray-400 hover:text-mauve-600 dark:hover:text-mauve-400 transition-all duration-200 rounded-lg hover:bg-mauve-50 dark:hover:bg-mauve-900/20"
+              >
+                <svg
+                  class="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"
+                  ></path>
+                </svg>
+              </button>
+
+              <!-- More Options Dropdown -->
               <div
-                id="word-count"
-                class="text-sm text-gray-500 dark:text-gray-400 px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-800/50"
+                id="more-options"
+                class="hidden absolute top-full right-0 mt-2 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg dropdown-shadow z-50"
               >
-                0 words, 0 chars
-              </div>
-
-              <!-- Copy Note Content -->
-              <button
-                onclick="copyNoteContent()"
-                title="Copy note content"
-                class="p-2 text-gray-600 dark:text-gray-400 hover:text-mauve-600 dark:hover:text-mauve-400 transition-all duration-200 rounded-lg hover:bg-mauve-50 dark:hover:bg-mauve-900/20"
-              >
-                <svg
-                  class="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-                  ></path>
-                </svg>
-              </button>
-
-              <!-- Upload File -->
-              <button
-                onclick="uploadFile()"
-                title="Upload file"
-                class="p-2 text-gray-600 dark:text-gray-400 hover:text-mauve-600 dark:hover:text-mauve-400 transition-all duration-200 rounded-lg hover:bg-mauve-50 dark:hover:bg-mauve-900/20"
-              >
-                <svg
-                  class="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-                  ></path>
-                </svg>
-              </button>
-
-              <!-- Theme Toggle -->
-              <button
-                onclick="toggleTheme()"
-                title="Toggle dark mode"
-                class="p-2 text-gray-600 dark:text-gray-400 hover:text-mauve-600 dark:hover:text-mauve-400 transition-all duration-200 rounded-lg hover:bg-mauve-50 dark:hover:bg-mauve-900/20"
-              >
-                <svg
-                  class="w-5 h-5 dark:hidden"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
-                  ></path>
-                </svg>
-                <svg
-                  class="w-5 h-5 hidden dark:block"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
-                  ></path>
-                </svg>
-              </button>
-
-              <!-- More Options -->
-              <div class="relative">
-                <button
-                  onclick="toggleMoreOptions()"
-                  title="More options"
-                  class="p-2 text-gray-600 dark:text-gray-400 hover:text-mauve-600 dark:hover:text-mauve-400 transition-all duration-200 rounded-lg hover:bg-mauve-50 dark:hover:bg-mauve-900/20"
-                >
-                  <svg
-                    class="w-5 h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
+                <div class="py-2">
+                  <button
+                    onclick="downloadNote('txt')"
+                    class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-mauve-50 dark:hover:bg-mauve-900/20 hover:text-mauve-700 dark:hover:text-mauve-300 transition-all duration-200 flex items-center gap-2"
                   >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"
-                    ></path>
-                  </svg>
-                </button>
-
-                <!-- More Options Dropdown -->
-                <div
-                  id="more-options"
-                  class="hidden absolute top-full right-0 mt-2 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg dropdown-shadow z-50"
-                >
-                  <div class="py-2">
-                    <button
-                      onclick="shareCurrentNote()"
-                      class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-mauve-50 dark:hover:bg-mauve-900/20 hover:text-mauve-700 dark:hover:text-mauve-300 transition-all duration-200 flex items-center gap-2"
-                    >
-                      <svg
-                        class="w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z"
-                        ></path>
-                      </svg>
-                      Share note
-                    </button>
-                    <hr class="my-2 border-gray-200 dark:border-gray-700" />
-                    <button
-                      onclick="downloadNote('txt')"
-                      class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-mauve-50 dark:hover:bg-mauve-900/20 hover:text-mauve-700 dark:hover:text-mauve-300 transition-all duration-200"
-                    >
-                      Download as .txt
-                    </button>
-                    <button
-                      onclick="downloadNote('md')"
-                      class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-mauve-50 dark:hover:bg-mauve-900/20 hover:text-mauve-700 dark:hover:text-mauve-300 transition-all duration-200"
-                    >
-                      Download as .md
-                    </button>
-                    <button
-                      onclick="printNote()"
-                      class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-mauve-50 dark:hover:bg-mauve-900/20 hover:text-mauve-700 dark:hover:text-mauve-300 transition-all duration-200"
-                    >
-                      Print note
-                    </button>
-                    <hr class="my-2 border-gray-200 dark:border-gray-700" />
-                    <button
-                      onclick="deleteCurrentNote()"
-                      class="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-700 dark:hover:text-red-300 transition-all duration-200"
-                    >
-                      Delete note
-                    </button>
-                  </div>
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                    Export as .txt
+                  </button>
+                  <button
+                    onclick="downloadNote('md')"
+                    class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-mauve-50 dark:hover:bg-mauve-900/20 hover:text-mauve-700 dark:hover:text-mauve-300 transition-all duration-200 flex items-center gap-2"
+                  >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                    Export as .md
+                  </button>
+                  <hr class="my-2 border-gray-200 dark:border-gray-700" />
+                  <button
+                    onclick="showAboutModal()"
+                    class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-mauve-50 dark:hover:bg-mauve-900/20 hover:text-mauve-700 dark:hover:text-mauve-300 transition-all duration-200 flex items-center gap-2"
+                  >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    About
+                  </button>
                 </div>
               </div>
             </div>
           </div>
+        </div>
         </div>
       </div>
     </nav>
@@ -411,6 +383,38 @@
           >
             Close
           </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- About Modal -->
+    <div
+      id="about-modal"
+      class="hidden fixed inset-0 modal-backdrop z-50 flex items-center justify-center"
+      onclick="closeAboutModal()"
+    >
+      <div
+        class="bg-white dark:bg-gray-800 rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl border border-gray-200 dark:border-gray-700"
+        onclick="event.stopPropagation()"
+      >
+        <div class="text-center">
+          <div class="w-12 h-12 bg-mauve-100 dark:bg-mauve-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+            <div class="w-3 h-3 bg-mauve-500 rounded-full"></div>
+          </div>
+          <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">
+            blank.ashref.tn
+          </h3>
+          <p class="text-sm text-gray-600 dark:text-gray-400 mb-6">
+            Made by <a href="https://ashref.tn" target="_blank" class="text-mauve-600 dark:text-mauve-400 hover:text-mauve-700 dark:hover:text-mauve-300 transition-colors">ashref.tn</a> for a simple note taking experience
+          </p>
+          <div class="flex justify-center">
+            <button
+              onclick="closeAboutModal()"
+              class="px-6 py-2 bg-mauve-600 hover:bg-mauve-700 text-white rounded-lg text-sm font-medium transition-all duration-200 hover:shadow-lg hover:shadow-mauve-500/25"
+            >
+              Close
+            </button>
+          </div>
         </div>
       </div>
     </div>
