@@ -1,0 +1,29 @@
+<div class="max-w-2xl mx-auto text-center">
+    <div class="text-gray-500 dark:text-gray-400 mb-8">
+        <p class="text-lg mb-4">Page deleted</p>
+        <p class="text-sm">Create a new page to continue writing</p>
+    </div>
+    <textarea 
+        placeholder="Start writing..."
+        class="w-full h-96 bg-transparent border-none outline-none resize-none text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 text-lg leading-relaxed font-cousine"
+        style="font-size: 16px; line-height: 1.6;"
+        hx-post="/htmx/note"
+        hx-trigger="input delay:2s"
+        hx-target="#main-content"
+        hx-swap="innerHTML"
+        oninput="updateWordCount(this.value)"
+        autofocus></textarea>
+</div>
+
+<script>
+    // Update sidebar
+    htmx.ajax('GET', '/htmx/sidebar', {target: '#page-list', swap: 'innerHTML'});
+    
+    // Update word count and page title
+    updateWordCount('');
+    updatePageTitle('Untitled');
+    
+    // Clear current note ID
+    window.currentNoteId = null;
+</script>
+

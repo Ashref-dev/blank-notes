@@ -1,0 +1,408 @@
+/* Import Cousine font */
+@import url('https://fonts.googleapis.com/css2?family=Cousine:ital,wght@0,400;0,700;1,400;1,700&display=swap');
+
+/* Global styles */
+* {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+body {
+    font-family: 'Cousine', monospace;
+    font-size: 16px;
+    line-height: 1.6;
+}
+
+/* Custom scrollbar with mauve accent */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(166, 136, 241, 0.3);
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(166, 136, 241, 0.5);
+}
+
+.dark ::-webkit-scrollbar-thumb {
+    background: rgba(166, 136, 241, 0.4);
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+    background: rgba(166, 136, 241, 0.6);
+}
+
+/* Focus styles for textarea */
+textarea:focus {
+    outline: none !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+/* Remove any browser-specific focus styles */
+textarea:focus-visible {
+    outline: none !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+/* Ensure no focus ring on any browser */
+textarea {
+    outline: none !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+/* Modern, elegant improvements */
+body {
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    transition: all 0.4s ease;
+}
+
+.dark body {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+}
+
+/* Enhanced navigation bar */
+nav {
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    background: rgba(255, 255, 255, 0.85) !important;
+    border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+    transition: all 0.3s ease;
+}
+
+.dark nav {
+    background: rgba(15, 23, 42, 0.85) !important;
+    border-bottom: 1px solid rgba(51, 65, 85, 0.8);
+}
+
+/* Elegant writing area */
+#main-textarea {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 0;
+    transition: all 0.3s ease;
+    font-size: 18px;
+    line-height: 1.8;
+}
+
+.dark #main-textarea {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+/* Subtle focus enhancement without outline */
+#main-textarea:focus {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.dark #main-textarea:focus {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+/* Smooth transitions for all interactive elements */
+button, select, input {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Subtle hover effects - elegant and minimal */
+button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(166, 136, 241, 0.15);
+}
+
+.dark button:hover {
+    box-shadow: 0 4px 12px rgba(166, 136, 241, 0.25);
+}
+
+/* Modern button styling */
+button {
+    border-radius: 8px;
+    font-weight: 500;
+}
+
+/* Elegant active states */
+button:active {
+    transform: translateY(0px);
+    transition: all 0.1s ease;
+}
+
+/* Navigation bar specific styling */
+nav {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif !important;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+}
+    font-weight: 500;
+}
+
+nav button, nav div {
+    font-family: inherit !important;
+}
+
+/* Word count styling */
+#word-count {
+    font-family: inherit !important;
+    font-weight: 400;
+    font-size: 13px;
+    letter-spacing: 0.025em;
+}
+
+/* Enhanced button states in navbar */
+nav button {
+    position: relative;
+    overflow: hidden;
+}
+
+/* Dropdown menu improvements with mauve accent */
+.dropdown-shadow {
+    box-shadow: 0 10px 25px -3px rgba(166, 136, 241, 0.1), 0 4px 6px -2px rgba(166, 136, 241, 0.05);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif !important;
+    border: 1px solid rgba(166, 136, 241, 0.1);
+}
+
+.dark .dropdown-shadow {
+    box-shadow: 0 10px 25px -3px rgba(166, 136, 241, 0.2), 0 4px 6px -2px rgba(166, 136, 241, 0.1);
+    border: 1px solid rgba(166, 136, 241, 0.2);
+}
+
+/* Ensure dropdown content uses sans-serif */
+#page-dropdown, #more-options {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif !important;
+}
+
+#page-dropdown button, #more-options button {
+    font-family: inherit !important;
+}
+
+/* Consistent spacing */
+.dropdown-item {
+    padding: 0.75rem 1rem;
+    margin: 0.125rem;
+    border-radius: 6px;
+}
+
+@media (max-width: 768px) {
+    #main-textarea {
+        padding: 2rem 1.5rem !important;
+    }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+    #main-textarea {
+        padding: 3rem 4rem !important;
+    }
+}
+
+@media (min-width: 1025px) {
+    #main-textarea {
+        padding: 4rem 6rem !important;
+    }
+}
+
+/* Enhanced dropdown and modal styling */
+.dropdown-shadow {
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.dark .dropdown-shadow {
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
+}
+
+/* Backdrop blur support */
+.backdrop-blur-sm {
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+}
+
+/* Dropdown animations */
+.dropdown-enter {
+    opacity: 0;
+    transform: translateY(-10px);
+}
+
+.dropdown-enter-active {
+    opacity: 1;
+    transform: translateY(0);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.dropdown-exit {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.dropdown-exit-active {
+    opacity: 0;
+    transform: translateY(-10px);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+/* Button hover effects */
+button {
+    position: relative;
+/* Modal styles with elegant backdrop */
+.modal-backdrop {
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    background: rgba(0, 0, 0, 0.4);
+}
+
+/* Elegant focus states */
+input:focus, select:focus {
+    outline: none;
+    border-color: rgba(166, 136, 241, 0.5);
+    box-shadow: 0 0 0 3px rgba(166, 136, 241, 0.1);
+}
+
+/* Print styles */
+@media print {
+    body {
+        background: white !important;
+        color: black !important;
+    }
+    
+    nav {
+        display: none !important;
+    }
+    
+    main {
+        padding-top: 0 !important;
+    }
+    
+    .no-print {
+        display: none !important;
+    }
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+    nav .max-w-7xl {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+    
+    main .max-w-4xl {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+    
+    #page-dropdown {
+        width: calc(100vw - 2rem);
+        left: 1rem;
+        right: 1rem;
+    }
+    
+    .flex.items-center.gap-4 {
+        gap: 0.5rem;
+    }
+    
+    .flex.items-center.gap-4 button span {
+        display: none;
+    }
+}
+
+/* Dark mode specific adjustments */
+.dark {
+    color-scheme: dark;
+}
+
+/* Smooth theme transitions */
+html {
+    transition: background-color 0.3s ease;
+}
+
+/* Custom selection colors */
+::selection {
+    background-color: rgba(59, 130, 246, 0.3);
+}
+
+.dark ::selection {
+    background-color: rgba(59, 130, 246, 0.4);
+}
+
+/* Loading states */
+.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid #3498db;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Fade in animation */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.fade-in {
+    animation: fadeIn 0.3s ease-out;
+}
+
+/* Enhanced focus states */
+button:focus-visible,
+textarea:focus-visible {
+    outline: 2px solid rgba(59, 130, 246, 0.5);
+    outline-offset: 2px;
+}
+
+/* Improved button states */
+button:active {
+    transform: translateY(1px);
+}
+
+/* Tooltip styles */
+.tooltip {
+    position: relative;
+}
+
+.tooltip::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+}
+
+.tooltip:hover::after {
+    opacity: 1;
+}
+

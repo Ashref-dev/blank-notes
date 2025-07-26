@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{.title}}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cousine:ital,wght@0,400;0,700;1,400;1,700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/static/css/style.css" />
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            fontFamily: {
+              cousine: ['Cousine', 'monospace'],
+            },
+            colors: {
+              mauve: {
+                50: '#faf8ff',
+                100: '#f4f1fe',
+                200: '#e9e5fd',
+                300: '#d9d0fb',
+                400: '#c4b2f7',
+                500: '#a688f1',
+                600: '#9064e8',
+                700: '#7c4ddb',
+                800: '#6941c6',
+                900: '#553c9a',
+                950: '#372560',
+              },
+            },
+          },
+        },
+      };
+    </script>
+  </head>
+  <body
+    class="bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-cousine transition-colors duration-300 min-h-screen"
+  >
+    <!-- Top Navigation Bar -->
+    <nav
+      class="fixed top-0 left-0 right-0 z-50 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border-b border-gray-200 dark:border-gray-700 font-sans"
+    >
+      <div class="w-full px-8 py-4">
+        <div class="flex justify-between items-center">
+          <!-- Left: Site Title and Page Selector -->
+          <div class="flex items-center gap-6">
+            <!-- Site Title/Logo -->
+            <div class="flex items-center gap-2">
+              <div class="w-2 h-2 bg-mauve-500 rounded-full"></div>
+              <h1 class="text-lg font-medium text-gray-900 dark:text-gray-100">
+                blank.ashref.tn
+              </h1>
+            </div>
+            
+            <!-- Page Selector -->
+            <div class="relative">
+              <button
+                id="page-selector"
+                onclick="togglePageSelector()"
+                title="Select or create notes"
+                class="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-mauve-600 dark:hover:text-mauve-400 transition-all duration-200 rounded-lg hover:bg-mauve-50 dark:hover:bg-mauve-900/20"
+              >
+                <svg
+                  class="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                ></path>
+              </svg>
+              <span id="current-page-title">Untitled</span>
+              <svg
+                class="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M19 9l-7 7-7-7"
+                ></path>
+              </svg>
+            </button>
+
+            <!-- Dropdown Menu -->
+            <div
+              id="page-dropdown"
+              class="hidden absolute top-full left-0 mt-2 w-80 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg dropdown-shadow z-50"
+            >
+              <div class="p-4 border-b border-gray-200 dark:border-gray-700">
+                <button
+                  onclick="createNewNote(); closePageSelector();"
+                  title="Create a new note"
+                  class="w-full bg-mauve-600 hover:bg-mauve-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 hover:shadow-lg hover:shadow-mauve-500/25"
+                >
+                  + New Note
+                </button>
+              </div>
+              <div
+                id="page-list"
+                class="max-h-64 overflow-y-auto"
+              >
+                <!-- Pages will be loaded here by JavaScript -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Right: Actions -->
+          <div class="flex items-center gap-3">
+            <!-- Word Count -->
+            <div
+              id="word-count"
+              class="text-sm text-gray-500 dark:text-gray-400 px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-800/50"
+            >
+              0 words, 0 chars
+            </div>
+
+            <!-- Copy Note Content -->
+            <button
+              onclick="copyNoteContent()"
+              title="Copy note content"
+              class="p-2 text-gray-600 dark:text-gray-400 hover:text-mauve-600 dark:hover:text-mauve-400 transition-all duration-200 rounded-lg hover:bg-mauve-50 dark:hover:bg-mauve-900/20"
+            >
+              <svg
+                class="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                ></path>
+              </svg>
+            </button>
+
+            <!-- Upload File -->
+            <button
+              onclick="uploadFile()"
+              title="Upload file"
+              class="p-2 text-gray-600 dark:text-gray-400 hover:text-mauve-600 dark:hover:text-mauve-400 transition-all duration-200 rounded-lg hover:bg-mauve-50 dark:hover:bg-mauve-900/20"
+            >
+              <svg
+                class="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                ></path>
+              </svg>
+            </button>
+
+            <!-- Theme Toggle -->
+            <button
+              onclick="toggleTheme()"
+              title="Toggle dark mode"
+              class="p-2 text-gray-600 dark:text-gray-400 hover:text-mauve-600 dark:hover:text-mauve-400 transition-all duration-200 rounded-lg hover:bg-mauve-50 dark:hover:bg-mauve-900/20"
+            >
+              <svg
+                class="w-5 h-5 dark:hidden"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
+                ></path>
+              </svg>
+              <svg
+                class="w-5 h-5 hidden dark:block"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
+                ></path>
+              </svg>
+            </button>
+
+            <!-- More Options -->
+            <div class="relative">
+              <button
+                onclick="toggleMoreOptions()"
+                title="More options"
+                class="p-2 text-gray-600 dark:text-gray-400 hover:text-mauve-600 dark:hover:text-mauve-400 transition-all duration-200 rounded-lg hover:bg-mauve-50 dark:hover:bg-mauve-900/20"
+              >
+                <svg
+                  class="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"
+                  ></path>
+                </svg>
+              </button>
+
+              <!-- More Options Dropdown -->
+              <div
+                id="more-options"
+                class="hidden absolute top-full right-0 mt-2 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg dropdown-shadow z-50"
+              >
+                <div class="py-2">
+                  <button
+                    onclick="shareCurrentNote()"
+                    class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-mauve-50 dark:hover:bg-mauve-900/20 hover:text-mauve-700 dark:hover:text-mauve-300 transition-all duration-200 flex items-center gap-2"
+                  >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z"></path>
+                    </svg>
+                    Share note
+                  </button>
+                  <hr class="my-2 border-gray-200 dark:border-gray-700" />
+                  <button
+                    onclick="downloadNote('txt')"
+                    class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-mauve-50 dark:hover:bg-mauve-900/20 hover:text-mauve-700 dark:hover:text-mauve-300 transition-all duration-200"
+                  >
+                    Download as .txt
+                  </button>
+                  <button
+                    onclick="downloadNote('md')"
+                    class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-mauve-50 dark:hover:bg-mauve-900/20 hover:text-mauve-700 dark:hover:text-mauve-300 transition-all duration-200"
+                  >
+                    Download as .md
+                  </button>
+                  <button
+                    onclick="printNote()"
+                    class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-mauve-50 dark:hover:bg-mauve-900/20 hover:text-mauve-700 dark:hover:text-mauve-300 transition-all duration-200"
+                  >
+                    Print note
+                  </button>
+                  <hr class="my-2 border-gray-200 dark:border-gray-700" />
+                  <button
+                    onclick="deleteCurrentNote()"
+                    class="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-700 dark:hover:text-red-300 transition-all duration-200"
+                  >
+                    Delete note
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main class="pt-20 min-h-screen">
+      <div class="w-full" id="main-content">
+        <!-- Default content when no note is selected -->
+        <div class="w-full">
+          <div class="w-full max-w-none">
+            <textarea
+              id="main-textarea"
+              placeholder="Start writing..."
+              class="w-full bg-transparent border-none outline-none resize-none text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 text-lg leading-relaxed font-cousine"
+              style="
+                font-size: 18px;
+                line-height: 1.8;
+                min-height: 90vh;
+                max-width: 1200px;
+                margin: 0 auto;
+                display: block;
+                box-sizing: border-box;
+              "
+              oninput="handleTextareaInput(this.value)"
+              autofocus
+            ></textarea>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Share Result Modal -->
+    <div
+      id="share-modal"
+      class="hidden fixed inset-0 modal-backdrop z-50 flex items-center justify-center"
+    >
+      <div
+        class="bg-white dark:bg-gray-800 rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl border border-gray-200 dark:border-gray-700"
+      >
+        <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">
+          Share Link
+        </h3>
+        <div id="share-content">
+          <!-- Share content will be loaded here -->
+        </div>
+        <div class="mt-6 flex justify-end gap-3">
+          <button
+            onclick="closeShareModal()"
+            class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-mauve-600 dark:hover:text-mauve-400 transition-all duration-200 rounded-lg hover:bg-mauve-50 dark:hover:bg-mauve-900/20"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+  </body>
+</html>
