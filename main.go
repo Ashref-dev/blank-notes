@@ -26,6 +26,12 @@ func main() {
 	// Auto-migrate the schema
 	db.AutoMigrate(&Note{}, &SharedNote{})
 
+	// Clean up expired shared notes on startup
+	cleanupExpiredNotes()
+
+	// Start background cleanup routine
+	go startCleanupRoutine()
+
 	// Initialize Gin router
 	r := gin.Default()
 
@@ -104,4 +110,49 @@ func setupRoutes(r *gin.Engine) {
 			"timestamp": time.Now().Unix(),
 		})
 	})
+}
+
+// cleanupExpiredNotes removes expired shared notes and their associated notes
+func cleanupExpiredNotes() {
+	now := time.Now()
+
+	// Find expired shared notes
+	var expiredSharedNotes []SharedNote
+	if err := db.Where("expires_at IS NOT NULL AND expires_at < ?", now).Find(&expiredSharedNotes).Error; err != nil {
+		log.Printf("Error finding expired shared notes: %v", err)
+		return
+	}
+
+	if len(expiredSharedNotes) == 0 {
+		return
+	}
+
+	// Delete expired shared notes and their associated notes
+	for _, sharedNote := range expiredSharedNotes {
+		// Delete the shared note entry
+		if err := db.Delete(&sharedNote).Error; err != nil {
+			log.Printf("Error deleting shared note %s: %v", sharedNote.ID, err)
+			continue
+		}
+
+		// Delete the associated note (CASCADE should handle this, but being explicit)
+		if err := db.Delete(&Note{}, sharedNote.NoteID).Error; err != nil {
+			log.Printf("Error deleting note %s: %v", sharedNote.NoteID, err)
+		}
+	}
+
+	log.Printf("Cleaned up %d expired shared notes", len(expiredSharedNotes))
+}
+
+// startCleanupRoutine runs cleanup every 6 hours
+func startCleanupRoutine() {
+	ticker := time.NewTicker(6 * time.Hour)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			cleanupExpiredNotes()
+		}
+	}
 }

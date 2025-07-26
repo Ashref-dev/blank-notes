@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: blank-notes
+    env: docker
+    plan: free
+    region: frankfurt
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: DATABASE_URL
+        sync: false  # Will be set via CLI
+      - key: PORT
+        value: "8080"
+      - key: GIN_MODE
+        value: "release"
+    healthCheckPath: /
+    numInstances: 1

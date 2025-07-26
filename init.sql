@@ -4,40 +4,24 @@
 -- Enable UUID extension for generating UUIDs
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- Create a default user for demo purposes (in production, this would be handled by authentication)
-INSERT INTO users (id, username, email, password, created_at, updated_at) 
-VALUES (
-    '00000000-0000-0000-0000-000000000001',
-    'demo',
-    'demo@blankpage.com',
-    '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', -- password: "password"
-    NOW(),
-    NOW()
-) ON CONFLICT (id) DO NOTHING;
+-- Create notes table (only used for sharing purposes)
+CREATE TABLE IF NOT EXISTS notes (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    title TEXT NOT NULL,
+    content TEXT,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Create shared_notes table
+CREATE TABLE IF NOT EXISTS shared_notes (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    note_id UUID NOT NULL REFERENCES notes(id) ON DELETE CASCADE,
+    created_at TIMESTAMP DEFAULT NOW(),
+    expires_at TIMESTAMP
+);
 
 -- Create indexes for better performance
-CREATE INDEX IF NOT EXISTS idx_notes_user_id ON notes(user_id);
 CREATE INDEX IF NOT EXISTS idx_notes_updated_at ON notes(updated_at DESC);
 CREATE INDEX IF NOT EXISTS idx_shared_notes_note_id ON shared_notes(note_id);
 CREATE INDEX IF NOT EXISTS idx_shared_notes_expires_at ON shared_notes(expires_at);
-
--- Create a sample note for the demo user
-INSERT INTO notes (id, user_id, title, content, created_at, updated_at)
-VALUES (
-    uuid_generate_v4(),
-    '00000000-0000-0000-0000-000000000001',
-    'Welcome to Blank.page',
-    'This is your first note! Start typing to create more notes.
-
-Features:
-- Auto-save as you type
-- Dark/light theme toggle
-- Share notes with others
-- Download as .txt or .md
-- Real-time word count
-
-Enjoy your minimalist note-taking experience!',
-    NOW(),
-    NOW()
-) ON CONFLICT DO NOTHING;
-
