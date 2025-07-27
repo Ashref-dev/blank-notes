@@ -1,4 +1,4 @@
--- Database initialization script for Blank.page application
+-- Database initialization script for application
 -- This script sets up the database with proper extensions and initial configuration
 
 -- Enable UUID extension for generating UUIDs

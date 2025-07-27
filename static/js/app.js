@@ -315,60 +315,81 @@ function deleteNote(noteId) {
 
 function updateSidebar() {
     const pageList = document.getElementById('page-list');
-    if (!pageList) return;
+    const pageListMobile = document.getElementById('page-list-mobile');
     
     const noteIds = Object.keys(notes);
+    
+    let html;
     if (noteIds.length === 0) {
-        pageList.innerHTML = '<div class="p-4 text-sm text-gray-500 dark:text-gray-400 text-center">No notes yet</div>';
-        return;
+        html = '<div class="p-4 text-sm text-gray-500 dark:text-gray-400 text-center">No notes yet</div>';
+    } else {
+        const sortedNotes = noteIds
+            .map(id => notes[id])
+            .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+        
+        html = sortedNotes.map(note => {
+            const isActive = note.id === currentNoteId;
+            const date = new Date(note.updatedAt).toLocaleDateString();
+            
+            return `
+                <div class="flex items-center justify-between px-4 py-3 hover:bg-mauve-50 dark:hover:bg-mauve-900/20 cursor-pointer transition-all duration-200 ${isActive ? 'bg-mauve-50 dark:bg-mauve-900/20 border-r-2 border-mauve-500' : ''}"
+                     onclick="switchToNote('${note.id}')">
+                    <div class="flex-1 min-w-0">
+                        <div class="text-sm font-medium text-gray-900 dark:text-white truncate">
+                            ${note.title}
+                        </div>
+                        <div class="text-xs text-gray-500 dark:text-gray-400">
+                            ${date}
+                        </div>
+                    </div>
+                    <button onclick="event.stopPropagation(); deleteNote('${note.id}')" 
+                            class="ml-2 p-1 text-gray-400 hover:text-red-500 transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                        </svg>
+                    </button>
+                </div>
+            `;
+        }).join('');
     }
     
-    const sortedNotes = noteIds
-        .map(id => notes[id])
-        .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
-    
-    const html = sortedNotes.map(note => {
-        const isActive = note.id === currentNoteId;
-        const date = new Date(note.updatedAt).toLocaleDateString();
-        
-        return `
-            <div class="flex items-center justify-between px-4 py-3 hover:bg-mauve-50 dark:hover:bg-mauve-900/20 cursor-pointer transition-all duration-200 ${isActive ? 'bg-mauve-50 dark:bg-mauve-900/20 border-r-2 border-mauve-500' : ''}"
-                 onclick="switchToNote('${note.id}')">
-                <div class="flex-1 min-w-0">
-                    <div class="text-sm font-medium text-gray-900 dark:text-white truncate">
-                        ${note.title}
-                    </div>
-                    <div class="text-xs text-gray-500 dark:text-gray-400">
-                        ${date}
-                    </div>
-                </div>
-                <button onclick="event.stopPropagation(); deleteNote('${note.id}')" 
-                        class="ml-2 p-1 text-gray-400 hover:text-red-500 transition-colors">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                    </svg>
-                </button>
-            </div>
-        `;
-    }).join('');
-    
-    pageList.innerHTML = html;
+    // Update both desktop and mobile page lists
+    if (pageList) {
+        pageList.innerHTML = html;
+    }
+    if (pageListMobile) {
+        pageListMobile.innerHTML = html;
+    }
     
     // Update current page title in nav
     if (currentNoteId && notes[currentNoteId]) {
+        const title = notes[currentNoteId].title;
+        const truncatedTitle = title.length > 20 ? title.substring(0, 20) + '...' : title;
+        
+        // Update desktop title
         const titleElement = document.getElementById('current-page-title');
         if (titleElement) {
-            const title = notes[currentNoteId].title;
-            titleElement.textContent = title.length > 20 ? title.substring(0, 20) + '...' : title;
+            titleElement.textContent = truncatedTitle;
+        }
+        
+        // Update mobile title
+        const titleElementMobile = document.getElementById('current-page-title-mobile');
+        if (titleElementMobile) {
+            titleElementMobile.textContent = truncatedTitle;
         }
     }
 }
 // Page selector functionality
 function togglePageSelector() {
+    // Check if either dropdown is open
     const dropdown = document.getElementById('page-dropdown');
-    const isOpen = !dropdown.classList.contains('hidden');
+    const dropdownMobile = document.getElementById('page-dropdown-mobile');
     
-    if (isOpen) {
+    const isDesktopOpen = dropdown && !dropdown.classList.contains('hidden');
+    const isMobileOpen = dropdownMobile && !dropdownMobile.classList.contains('hidden');
+    const isAnyOpen = isDesktopOpen || isMobileOpen;
+    
+    if (isAnyOpen) {
         closePageSelector();
     } else {
         openPageSelector();
@@ -376,24 +397,60 @@ function togglePageSelector() {
 }
 
 function openPageSelector() {
+    // Close any open dropdowns first
+    closeAllDropdowns();
+    
+    // Open appropriate dropdown based on screen size
     const dropdown = document.getElementById('page-dropdown');
-    dropdown.classList.remove('hidden');
+    const dropdownMobile = document.getElementById('page-dropdown-mobile');
+    
+    // Check if mobile layout is active (screen width < 768px)
+    if (window.innerWidth < 768) {
+        if (dropdownMobile) {
+            dropdownMobile.classList.remove('hidden');
+        }
+    } else {
+        if (dropdown) {
+            dropdown.classList.remove('hidden');
+        }
+    }
+    
     isPageSelectorOpen = true;
     updateSidebar();
 }
 
 function closePageSelector() {
+    // Close both desktop and mobile dropdowns
     const dropdown = document.getElementById('page-dropdown');
-    dropdown.classList.add('hidden');
+    const dropdownMobile = document.getElementById('page-dropdown-mobile');
+    
+    if (dropdown) {
+        dropdown.classList.add('hidden');
+    }
+    if (dropdownMobile) {
+        dropdownMobile.classList.add('hidden');
+    }
+    
     isPageSelectorOpen = false;
+}
+
+// Close all dropdown menus
+function closeAllDropdowns() {
+    closePageSelector();
+    closeMoreOptions();
 }
 
 // More options functionality
 function toggleMoreOptions() {
     const dropdown = document.getElementById('more-options');
-    const isOpen = !dropdown.classList.contains('hidden');
+    const dropdownMobile = document.getElementById('more-options-mobile');
     
-    if (isOpen) {
+    // Check if either dropdown is open
+    const isDesktopOpen = dropdown && !dropdown.classList.contains('hidden');
+    const isMobileOpen = dropdownMobile && !dropdownMobile.classList.contains('hidden');
+    const isAnyOpen = isDesktopOpen || isMobileOpen;
+    
+    if (isAnyOpen) {
         closeMoreOptions();
     } else {
         openMoreOptions();
@@ -401,14 +458,39 @@ function toggleMoreOptions() {
 }
 
 function openMoreOptions() {
+    // Close any open dropdowns first
+    closeAllDropdowns();
+    
+    // Open appropriate dropdown based on screen size
     const dropdown = document.getElementById('more-options');
-    dropdown.classList.remove('hidden');
+    const dropdownMobile = document.getElementById('more-options-mobile');
+    
+    // Check if mobile layout is active (screen width < 768px)
+    if (window.innerWidth < 768) {
+        if (dropdownMobile) {
+            dropdownMobile.classList.remove('hidden');
+        }
+    } else {
+        if (dropdown) {
+            dropdown.classList.remove('hidden');
+        }
+    }
+    
     isMoreOptionsOpen = true;
 }
 
 function closeMoreOptions() {
+    // Close both desktop and mobile dropdowns
     const dropdown = document.getElementById('more-options');
-    dropdown.classList.add('hidden');
+    const dropdownMobile = document.getElementById('more-options-mobile');
+    
+    if (dropdown) {
+        dropdown.classList.add('hidden');
+    }
+    if (dropdownMobile) {
+        dropdownMobile.classList.add('hidden');
+    }
+    
     isMoreOptionsOpen = false;
 }
 
@@ -422,9 +504,16 @@ function updateWordCount(content) {
     const chars = content.length;
     const charsNoSpaces = content.replace(/\s/g, '').length;
     
+    // Update desktop word count
     const wordCountElement = document.getElementById('word-count');
     if (wordCountElement) {
         wordCountElement.textContent = `${words} words, ${chars} chars`;
+    }
+    
+    // Update mobile word count (more compact)
+    const wordCountMobileElement = document.getElementById('word-count-mobile');
+    if (wordCountMobileElement) {
+        wordCountMobileElement.textContent = `${words}w, ${chars}c`;
     }
     
     // Also log for debugging
@@ -434,14 +523,22 @@ function updateWordCount(content) {
 // Page title functionality
 function updatePageTitle(content) {
     const title = getNoteTitleFromContent(content);
+    const truncatedTitle = title.length > 20 ? title.substring(0, 20) + '...' : title;
     
+    // Update desktop title
     const titleElement = document.getElementById('current-page-title');
     if (titleElement) {
-        titleElement.textContent = title.length > 20 ? title.substring(0, 20) + '...' : title;
+        titleElement.textContent = truncatedTitle;
+    }
+    
+    // Update mobile title
+    const titleElementMobile = document.getElementById('current-page-title-mobile');
+    if (titleElementMobile) {
+        titleElementMobile.textContent = truncatedTitle;
     }
     
     // Update browser title
-    document.title = title === 'Untitled' ? 'Blank.page' : `${title} - Blank.page`;
+    document.title = title === 'Untitled' ? 'Blank.ashref.tn' : `${title} - Blank.ashref.tn`;
 }
 
 // Share functionality
@@ -785,26 +882,43 @@ function showToast(message) {
 function setupEventListeners() {
     // Close dropdowns when clicking outside
     document.addEventListener('click', function(event) {
-        const pageSelector = document.getElementById('page-selector');
+        // Define all dropdowns and their triggers
         const pageDropdown = document.getElementById('page-dropdown');
-        const moreOptions = document.getElementById('more-options');
+        const pageDropdownMobile = document.getElementById('page-dropdown-mobile');
+        const moreOptionsDropdown = document.getElementById('more-options');
+        const moreOptionsDropdownMobile = document.getElementById('more-options-mobile');
+
+        const pageSelectorButton = document.getElementById('page-selector');
+        const pageSelectorButtonMobile = document.getElementById('page-selector-mobile');
+        const moreOptionsButton = document.getElementById('more-options-button');
+        const moreOptionsButtonMobile = document.getElementById('more-options-button-mobile');
+
+        // Function to check if a click is inside a component (trigger + dropdown)
+        const isClickInside = (target, trigger, dropdown) => {
+            if (!trigger && !dropdown) return false;
+            const triggerContains = trigger ? trigger.contains(target) : false;
+            const dropdownContains = dropdown && !dropdown.classList.contains('hidden') ? dropdown.contains(target) : false;
+            return triggerContains || dropdownContains;
+        };
         
-        // Close page selector if clicking outside
-        if (isPageSelectorOpen && !pageSelector.contains(event.target) && !pageDropdown.contains(event.target)) {
+        const isClickInsidePageSelector = isClickInside(event.target, pageSelectorButton, pageDropdown) || 
+                                          isClickInside(event.target, pageSelectorButtonMobile, pageDropdownMobile);
+
+        const isClickInsideMoreOptions = isClickInside(event.target, moreOptionsButton, moreOptionsDropdown) ||
+                                         isClickInside(event.target, moreOptionsButtonMobile, moreOptionsDropdownMobile);
+
+        if (!isClickInsidePageSelector) {
             closePageSelector();
         }
-        
-        // Close more options if clicking outside
-        if (isMoreOptionsOpen && !event.target.closest('.relative')) {
+        if (!isClickInsideMoreOptions) {
             closeMoreOptions();
         }
     });
-    
+
     // Handle escape key
     document.addEventListener('keydown', function(event) {
         if (event.key === 'Escape') {
-            closePageSelector();
-            closeMoreOptions();
+            closeAllDropdowns();
             closeShareModal();
             closeAboutModal();
         }
@@ -882,4 +996,5 @@ window.printNote = printNote;
 window.deleteCurrentNote = deleteCurrentNote;
 window.showAboutModal = showAboutModal;
 window.closeAboutModal = closeAboutModal;
+window.closeMoreOptions = closeMoreOptions;
 

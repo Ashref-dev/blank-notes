@@ -2,6 +2,10 @@
 
 A modern, elegant note-taking application with a local-first approach. Built with Go (Gin) backend and vanilla JavaScript frontend. Features instant local storage for notes with optional cloud sharing via PostgreSQL.
 
+## Screenshot
+
+![Blank Note Taking App](shot.jpeg)
+
 ## Features
 
 - **Local-First Storage**: Notes saved instantly to browser localStorage - no network delays
