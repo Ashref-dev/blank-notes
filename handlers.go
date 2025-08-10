@@ -25,6 +25,11 @@ type ShareResponse struct {
 
 // Share note handler for local storage notes
 func shareNoteHandler(c *gin.Context) {
+	if db == nil { // sharing disabled when no database
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Sharing disabled"})
+		return
+	}
+
 	var req ShareRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
@@ -87,6 +92,11 @@ func shareNoteHandler(c *gin.Context) {
 
 // Get shared note handler
 func getSharedNoteHandler(c *gin.Context) {
+	if db == nil { // sharing disabled when no database
+		c.HTML(http.StatusServiceUnavailable, "shared_not_found.html", gin.H{"title": "Sharing Disabled"})
+		return
+	}
+
 	shareID := c.Param("shareId")
 
 	shareUUID, err := uuid.Parse(shareID)
@@ -128,6 +138,11 @@ func indexHandler(c *gin.Context) {
 }
 
 func downloadNoteHandler(c *gin.Context) {
+	if db == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Downloads disabled"})
+		return
+	}
+
 	noteID := c.Param("id")
 	format := c.Param("format")
 
@@ -168,6 +183,11 @@ func downloadNoteHandler(c *gin.Context) {
 }
 
 func searchNotesHandler(c *gin.Context) {
+	if db == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Search disabled"})
+		return
+	}
+
 	query := c.Query("q")
 	if query == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Query parameter required"})
@@ -186,6 +206,10 @@ func searchNotesHandler(c *gin.Context) {
 }
 
 func statsHandler(c *gin.Context) {
+	if db == nil {
+		c.JSON(http.StatusOK, gin.H{"totalNotes": 0, "totalWords": 0, "sharingEnabled": false})
+		return
+	}
 	var totalNotes int64
 	var totalWords int64
 

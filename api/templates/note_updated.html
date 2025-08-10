@@ -1,0 +1,7 @@
+{{.wordCount}} words
+
+<script>
+    // Update page list to reflect changes
+    htmx.ajax('GET', '/htmx/sidebar', {target: '#page-list', swap: 'innerHTML'});
+</script>
+

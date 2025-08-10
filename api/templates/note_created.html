@@ -1,0 +1,30 @@
+<div class="max-w-2xl mx-auto">
+    <textarea 
+        name="content"
+        placeholder="Start writing..."
+        class="w-full h-96 bg-transparent border-none outline-none resize-none text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 text-lg leading-relaxed font-cousine"
+        style="font-size: 16px; line-height: 1.6;"
+        hx-put="/htmx/note/{{.note.ID}}"
+        hx-trigger="input delay:2s"
+        hx-target="#word-count"
+        hx-swap="innerHTML"
+        oninput="updateWordCount(this.value); updatePageTitle(this.value)"
+        data-note-id="{{.note.ID}}"
+        autofocus>{{.note.Content}}</textarea>
+</div>
+
+<script>
+    // Update sidebar with new note
+    htmx.ajax('GET', '/htmx/sidebar', {target: '#page-list', swap: 'innerHTML'});
+    
+    // Update word count
+    updateWordCount('');
+    updatePageTitle('');
+    
+    // Store current note ID globally
+    window.currentNoteId = '{{.note.ID}}';
+    
+    // Close page selector if open
+    closePageSelector();
+</script>
+

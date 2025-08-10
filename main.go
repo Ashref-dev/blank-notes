@@ -1,6 +1,9 @@
 package main
 
 import (
+	"embed"
+	"html/template"
+	"io/fs"
 	"log"
 	"net/http"
 	"os"
@@ -12,34 +15,59 @@ import (
 	"gorm.io/gorm"
 )
 
+//go:embed templates/*.html static/* static/css/* static/js/* static/favicon/*
+var embeddedFS embed.FS
+
 var db *gorm.DB
 
 func main() {
+	// Only run the traditional server when executing binary (not on Vercel function)
+	startServer()
+}
+
+func startServer() {
 	// Load environment variables from .env file
 	if err := godotenv.Load(); err != nil {
 		log.Println("No .env file found, using system environment variables")
 	}
+	initDBOptional()
+	if db != nil {
+		// Auto-migrate the schema
+		db.AutoMigrate(&Note{}, &SharedNote{})
 
-	// Initialize database
-	initDB()
-
-	// Auto-migrate the schema
-	db.AutoMigrate(&Note{}, &SharedNote{})
-
-	// Clean up expired shared notes on startup
-	cleanupExpiredNotes()
-
-	// Start background cleanup routine
-	go startCleanupRoutine()
+		// Clean up expired shared notes on startup
+		cleanupExpiredNotes()
+	}
 
 	// Initialize Gin router
+	r := NewRouter()
+
+	// Start server
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+	log.Printf("Server starting on port %s", port)
+	r.Run("0.0.0.0:" + port)
+}
+
+// NewRouter creates the Gin engine (used by both serverless and local run)
+func NewRouter() *gin.Engine {
 	r := gin.Default()
 
-	// Load HTML templates
-	r.LoadHTMLGlob("templates/*")
+	// Templates from embedded FS
+	if tmpl, err := template.ParseFS(embeddedFS, "templates/*.html"); err == nil {
+		r.SetHTMLTemplate(tmpl)
+	} else {
+		log.Printf("template parse error: %v", err)
+	}
 
-	// Serve static files
-	r.Static("/static", "./static")
+	// Static files from embedded FS
+	if sub, err := fs.Sub(embeddedFS, "static"); err == nil {
+		r.StaticFS("/static", http.FS(sub))
+	} else {
+		log.Printf("static fs error: %v", err)
+	}
 
 	// CORS middleware
 	r.Use(func(c *gin.Context) {
@@ -56,29 +84,25 @@ func main() {
 	// Routes
 	setupRoutes(r)
 
-	// Start server
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-	}
-	log.Printf("Server starting on port %s", port)
-	r.Run("0.0.0.0:" + port)
+	return r
 }
 
-func initDB() {
-	var err error
-
+func initDBOptional() {
 	// Get database URL from environment variable
 	dsn := os.Getenv("DATABASE_URL")
 	if dsn == "" {
-		log.Fatal("DATABASE_URL environment variable is required")
+		log.Println("DATABASE_URL not set - running in no-share mode")
+		return
 	}
 
-	db, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	// Connect to the database
+	connection, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
-		log.Fatal("Failed to connect to database:", err)
+		log.Printf("Failed to connect database: %v (sharing disabled)", err)
+		return
 	}
-	log.Println("Database connected successfully")
+	db = connection
+	log.Println("Database connected - sharing enabled")
 }
 
 func setupRoutes(r *gin.Engine) {
@@ -142,17 +166,4 @@ func cleanupExpiredNotes() {
 	}
 
 	log.Printf("Cleaned up %d expired shared notes", len(expiredSharedNotes))
-}
-
-// startCleanupRoutine runs cleanup every 6 hours
-func startCleanupRoutine() {
-	ticker := time.NewTicker(6 * time.Hour)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-ticker.C:
-			cleanupExpiredNotes()
-		}
-	}
 }
