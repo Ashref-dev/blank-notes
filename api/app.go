@@ -342,10 +342,32 @@ func getSharedNoteHandler(c *gin.Context) {
 		return
 	}
 
+	proto := c.Request.Header.Get("X-Forwarded-Proto")
+	if proto == "" {
+		if c.Request.TLS != nil {
+			proto = "https"
+		} else {
+			proto = "http"
+		}
+	}
+	host := c.Request.Host
+	pageURL := fmt.Sprintf("%s://%s/shared/%s", proto, host, shareUUID.String())
+	imgURL := fmt.Sprintf("%s://%s/static/og.jpg", proto, host)
+	desc := strings.TrimSpace(sharedNote.Note.Content)
+	if desc == "" {
+		desc = "A shared note from blank.ashref.tn"
+	}
+	if len(desc) > 180 {
+		desc = desc[:180] + "..."
+	}
+
 	c.HTML(http.StatusOK, "shared_note.html", gin.H{
-		"title":   sharedNote.Note.Title,
-		"content": sharedNote.Note.Content,
-		"date":    sharedNote.Note.CreatedAt.Format("January 2, 2006"),
+		"title":       sharedNote.Note.Title,
+		"content":     sharedNote.Note.Content,
+		"date":        sharedNote.Note.CreatedAt.Format("January 2, 2006"),
+		"url":         pageURL,
+		"image":       imgURL,
+		"description": desc,
 	})
 }
 
