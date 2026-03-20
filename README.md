@@ -176,32 +176,34 @@ CREATE TABLE shared_notes (
 ### Project Structure
 ```
 blankpage_app/
-├── main.go              # Main application and routing
-├── models.go            # Database models
-├── handlers.go          # HTTP handlers
-├── templates/           # HTML templates
-│   ├── index.html       # Main application template
-│   ├── sidebar.html     # Sidebar component
-│   ├── note_content.html # Note editor component
-│   └── ...              # Other templates
-├── static/
-│   ├── css/
-│   │   └── style.css    # Custom styles
-│   └── js/
-│       └── app.js       # Client-side JavaScript
+├── api/
+│   ├── app.go              # All application logic (handlers, models, routing)
+│   ├── templates/          # HTML templates (embedded)
+│   │   ├── index.html
+│   │   ├── sidebar.html
+│   │   └── ...
+│   └── static/             # Static assets (embedded)
+│       ├── css/style.css
+│       └── js/app.js
+├── main.go                 # Local development entry point
+├── go.mod                  # Go module definition
+├── vercel.json             # Vercel deployment config
 └── README.md
 ```
 
+**Note**: All business logic is in `/api/app.go`. The root `main.go` is a thin wrapper for local development that imports from the `api` package. This structure eliminates code duplication while supporting both local development and Vercel deployment.
+
 ### Adding Features
-1. Add new routes in `main.go`
-2. Implement handlers in `handlers.go`
-3. Create templates in `templates/`
-4. Add styles to `static/css/style.css`
-5. Add JavaScript to `static/js/app.js`
+1. Add new routes in `/api/app.go` (in `setupRoutes` function)
+2. Implement handlers in `/api/app.go`
+3. Update models in `/api/app.go`
+4. Create templates in `/api/templates/`
+5. Add styles to `/api/static/css/style.css`
+6. Add JavaScript to `/api/static/js/app.js`
 
 ### Database Migrations
 The application uses GORM's auto-migration feature. To add new fields:
-1. Update the model structs in `models.go`
+1. Update the model structs in `/api/app.go`
 2. Restart the application
 3. GORM will automatically create new columns
 
@@ -221,8 +223,7 @@ FROM alpine:latest
 RUN apk --no-cache add ca-certificates
 WORKDIR /root/
 COPY --from=builder /app/main .
-COPY --from=builder /app/templates ./templates
-COPY --from=builder /app/static ./static
+# Templates and static files are embedded in the binary
 CMD ["./main"]
 ```
 

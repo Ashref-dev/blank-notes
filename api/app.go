@@ -111,14 +111,22 @@ func (n *Note) CharCount() int {
 // Handler for Vercel serverless function
 func Handler(w http.ResponseWriter, r *http.Request) {
 	vercelOnce.Do(func() {
-		initDBOptional()
-		if db != nil {
-			db.AutoMigrate(&Note{}, &SharedNote{})
-			cleanupExpiredNotes()
-		}
-		vercelRouter = NewRouter()
+		InitApp()
 	})
 	vercelRouter.ServeHTTP(w, r)
+}
+
+func InitApp() {
+	initDBOptional()
+	if db != nil {
+		db.AutoMigrate(&Note{}, &SharedNote{})
+		cleanupExpiredNotes()
+	}
+	vercelRouter = NewRouter()
+}
+
+func GetRouter() http.Handler {
+	return vercelRouter
 }
 
 func initDBOptional() {

@@ -62,12 +62,13 @@ textarea {
 
 /* Modern, elegant improvements */
 body {
-  background: #f1f5f9;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
   transition: all 0.4s ease;
+  transition: background-color 0.4s ease, color 0.2s ease;
 }
 
 .dark body {
-  background: #1e293b;
+  background-color: #2b2b2b;
 }
 
 /* Enhanced navigation bar */
@@ -88,7 +89,7 @@ nav {
 #main-textarea {
   background: transparent !important;
   border-radius: 0;
-  transition: all 0.3s ease;
+  transition: background-color 0.3s ease;
   font-size: 18px;
   line-height: 1.8;
 }
@@ -97,13 +98,30 @@ nav {
   background: transparent !important;
 }
 
-/* Subtle focus enhancement without outline */
+/* Keep focus clean without tint */
 #main-textarea:focus {
   background: transparent !important;
 }
 
 .dark #main-textarea:focus {
   background: transparent !important;
+}
+
+/* Slightly lighter mauve in dark mode for legibility */
+.dark .text-mauve-600 {
+  color: #c4b2f7 !important;
+}
+.dark .hover\:text-mauve-600:hover {
+  color: #c4b2f7 !important;
+}
+.dark .bg-mauve-600 {
+  background-color: #a688f1 !important;
+}
+.dark .hover\:bg-mauve-700:hover {
+  background-color: #b79cf5 !important;
+}
+.dark .border-mauve-600 {
+  border-color: #a688f1 !important;
 }
 
 /* Smooth transitions for all interactive elements */
