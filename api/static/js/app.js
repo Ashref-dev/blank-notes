@@ -337,8 +337,8 @@ function deleteNote(noteId) {
 function initAttachments() {
     attachmentElements = {
         strip: document.getElementById('attachment-strip'),
-        handle: document.querySelector('.attachment-strip-handle'),
-        count: document.querySelector('.attachment-strip-count'),
+        handle: document.getElementById('attachment-strip-handle') || document.querySelector('.attachment-strip-handle'),
+        count: document.getElementById('attachment-strip-count') || document.querySelector('.attachment-strip-count'),
         body: document.getElementById('attachment-strip-body'),
         grid: document.getElementById('attachment-grid'),
         addButton: document.getElementById('attachment-add-btn'),
@@ -513,24 +513,26 @@ function renderAttachmentGrid() {
         return;
     }
 
+    if (attachmentElements.strip) {
+        attachmentElements.strip.classList.toggle('is-empty', !attachmentUiDisabled && attachments.length === 0);
+    }
+
     if (attachmentUiDisabled) {
-        attachmentElements.grid.innerHTML = '<div class="attachment-empty-state">Attachments are unavailable in this browser.</div>';
+        const message = attachmentElements.hint
+            ? escapeHtml(attachmentElements.hint.textContent || 'Attachments are unavailable in this browser.')
+            : 'Attachments are unavailable in this browser.';
+
+        attachmentElements.grid.innerHTML = `<div class="attachment-empty-state">${message}</div>`;
         updateAttachmentCount();
+        updateAttachmentHintVisibility();
         syncAttachmentStripHeight();
         return;
     }
 
     if (attachments.length === 0) {
-        attachmentElements.grid.innerHTML = `
-            <button type="button" class="attachment-mobile-add-tile" onclick="addAttachment()" aria-label="Add image">
-                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor">
-                    <path d="M10 4v12M4 10h12" stroke-linecap="round" stroke-width="1.8"></path>
-                </svg>
-                <span>Add image</span>
-            </button>
-            <div class="attachment-empty-state">Paste, drop, or add an image to keep it with this note.</div>
-        `;
+        attachmentElements.grid.innerHTML = '<div class="attachment-empty-state">Paste, drop, or click Add image</div>';
         updateAttachmentCount();
+        updateAttachmentHintVisibility();
         syncAttachmentStripHeight();
         return;
     }
@@ -542,25 +544,27 @@ function renderAttachmentGrid() {
 
         return `
             <article class="attachment-card" data-id="${attachment.id}">
-                <img src="${src}" alt="${filename}" loading="lazy" decoding="async" />
-                <div class="attachment-image-fallback" hidden>Preview unavailable</div>
-                <div class="attachment-card-actions">
-                    <button type="button" class="attachment-action" aria-label="Copy image" title="Copy image" onclick="copyAttachment('${attachment.id}')">
-                        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor">
-                            <rect x="7" y="7" width="9" height="9" rx="2" stroke-width="1.5"></rect>
-                            <path d="M5 12H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h7a1 1 0 0 1 1 1v1" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></path>
-                        </svg>
-                    </button>
-                    <button type="button" class="attachment-action" aria-label="Download image" title="Download image" onclick="downloadAttachment('${attachment.id}')">
-                        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor">
-                            <path d="M10 3.5v8m0 0l-3-3m3 3l3-3M4 14.5h12" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7"></path>
-                        </svg>
-                    </button>
-                    <button type="button" class="attachment-action" aria-label="Remove image" title="Remove image" onclick="removeAttachment('${attachment.id}')">
-                        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor">
-                            <path d="M5.5 5.5l9 9m0-9l-9 9" stroke-linecap="round" stroke-width="1.8"></path>
-                        </svg>
-                    </button>
+                <div class="attachment-card-media">
+                    <img src="${src}" alt="${filename}" loading="lazy" decoding="async" />
+                    <div class="attachment-image-fallback" hidden>Preview unavailable</div>
+                    <div class="attachment-card-actions">
+                        <button type="button" class="attachment-action" aria-label="Copy image" title="Copy image" onclick="copyAttachment('${attachment.id}')">
+                            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor">
+                                <rect x="7" y="7" width="9" height="9" rx="2" stroke-width="1.5"></rect>
+                                <path d="M5 12H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h7a1 1 0 0 1 1 1v1" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></path>
+                            </svg>
+                        </button>
+                        <button type="button" class="attachment-action" aria-label="Download image" title="Download image" onclick="downloadAttachment('${attachment.id}')">
+                            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor">
+                                <path d="M10 3.5v8m0 0l-3-3m3 3l3-3M4 14.5h12" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7"></path>
+                            </svg>
+                        </button>
+                        <button type="button" class="attachment-action" aria-label="Remove image" title="Remove image" onclick="removeAttachment('${attachment.id}')">
+                            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor">
+                                <path d="M5.5 5.5l9 9m0-9l-9 9" stroke-linecap="round" stroke-width="1.8"></path>
+                            </svg>
+                        </button>
+                    </div>
                 </div>
                 <footer class="attachment-meta">
                     <span class="attachment-name">${filename}</span>
@@ -570,15 +574,7 @@ function renderAttachmentGrid() {
         `;
     }).join('');
 
-    attachmentElements.grid.innerHTML = `
-        <button type="button" class="attachment-mobile-add-tile" onclick="addAttachment()" aria-label="Add image">
-            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor">
-                <path d="M10 4v12M4 10h12" stroke-linecap="round" stroke-width="1.8"></path>
-            </svg>
-            <span>Add image</span>
-        </button>
-        ${cards}
-    `;
+    attachmentElements.grid.innerHTML = cards;
 
     attachmentElements.grid.querySelectorAll('img').forEach(image => {
         image.addEventListener('error', function() {
@@ -591,7 +587,16 @@ function renderAttachmentGrid() {
     });
 
     updateAttachmentCount();
+    updateAttachmentHintVisibility();
     syncAttachmentStripHeight();
+}
+
+function updateAttachmentHintVisibility() {
+    if (!attachmentElements.hint) {
+        return;
+    }
+
+    attachmentElements.hint.hidden = attachmentUiDisabled || !attachmentIsExpanded || attachments.length > 0;
 }
 
 function toggleStrip(force) {
@@ -622,6 +627,7 @@ function setAttachmentExpanded(expanded, immediate) {
         body.hidden = false;
         body.setAttribute('aria-hidden', 'false');
         strip.classList.add('is-expanded');
+        updateAttachmentHintVisibility();
         syncAttachmentStripHeight();
         return;
     }
@@ -629,6 +635,7 @@ function setAttachmentExpanded(expanded, immediate) {
     strip.style.setProperty('--attachment-strip-height', `${collapsedHeight}px`);
     strip.classList.remove('is-expanded');
     body.setAttribute('aria-hidden', 'true');
+    updateAttachmentHintVisibility();
 
     if (reducedMotion) {
         body.hidden = true;

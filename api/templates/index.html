@@ -125,7 +125,7 @@
     <script defer src="/static/js/app.js"></script>
   </head>
   <body
-    class="bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-cousine transition-colors duration-300 min-h-screen"
+    class="editor-page bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-cousine transition-colors duration-300 min-h-screen"
   >
     <!-- Top Navigation Bar -->
     <nav
@@ -762,47 +762,51 @@
                 margin: 0 auto;
                 display: block;
                 box-sizing: border-box;
-              "
-              oninput="handleTextareaInput(this.value)"
+               "
+               oninput="handleTextareaInput(this.value)"
             ></textarea>
-            <section id="attachment-strip" class="attachment-strip" aria-label="Attachments">
-              <button
-                type="button"
-                class="attachment-strip-handle"
-                aria-expanded="false"
-                aria-controls="attachment-strip-body"
-                onclick="toggleStrip()"
-              >
-                <span class="attachment-strip-title">Attachments</span>
-                <span class="attachment-strip-count" data-count="0" hidden>0</span>
-                <span class="attachment-strip-caret" aria-hidden="true">
-                  <svg aria-hidden="true" focusable="false" viewBox="0 0 20 20" fill="none" stroke="currentColor">
-                    <path d="M5 7.5L10 12.5L15 7.5" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"></path>
-                  </svg>
-                </span>
-              </button>
-              <div
-                id="attachment-strip-body"
-                class="attachment-strip-body"
-                role="region"
-                aria-label="Note attachments"
-                aria-hidden="true"
-                hidden
-              >
-                <div class="attachment-grid" id="attachment-grid"></div>
-                <div class="attachment-strip-actions">
-                  <button type="button" class="attachment-add-btn" id="attachment-add-btn" onclick="addAttachment()">
-                    Add image
-                  </button>
-                  <span class="attachment-hint" id="attachment-hint">Or paste (Cmd+V) or drop images anywhere in this strip</span>
-                </div>
-                <input type="file" id="attachment-file-input" accept="image/*" multiple hidden>
-              </div>
-            </section>
           </div>
         </div>
       </div>
     </main>
+
+    <section id="attachment-strip" class="attachment-strip" aria-label="Attachments">
+      <div
+        id="attachment-strip-body"
+        class="attachment-strip-body"
+        role="region"
+        aria-label="Note attachments"
+        aria-hidden="true"
+        hidden
+      >
+        <div class="attachment-strip-row">
+          <button type="button" class="attachment-add-btn" id="attachment-add-btn" onclick="addAttachment()">
+            Add image
+          </button>
+          <div class="attachment-grid" id="attachment-grid"></div>
+        </div>
+        <span class="attachment-hint" id="attachment-hint">Or paste (Cmd+V) or drop images anywhere in this strip</span>
+        <input type="file" id="attachment-file-input" accept="image/*" multiple hidden>
+      </div>
+      <button
+        type="button"
+        id="attachment-strip-handle"
+        class="attachment-strip-handle"
+        aria-expanded="false"
+        aria-controls="attachment-strip-body"
+        onclick="toggleStrip()"
+      >
+        <span class="attachment-strip-label-group">
+          <span class="attachment-strip-title">Attachments</span>
+          <span id="attachment-strip-count" class="attachment-strip-count" data-count="0" hidden>0</span>
+        </span>
+        <span id="attachment-strip-caret" class="attachment-strip-caret" aria-hidden="true">
+          <svg aria-hidden="true" focusable="false" viewBox="0 0 20 20" fill="none" stroke="currentColor">
+            <path d="M5 7.5L10 12.5L15 7.5" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"></path>
+          </svg>
+        </span>
+      </button>
+    </section>
 
     <!-- Share Result Modal -->
     <div
