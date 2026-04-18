@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
     <!-- Primary Meta Tags -->
-    <title>{{.title}}</title>
+    <title>blank.ashref.tn - Minimalist Note Taking</title>
     <meta name="title" content="blank.ashref.tn - Minimalist Note Taking" />
     <meta
       name="description"
@@ -147,12 +147,15 @@
             <!-- Page Selector -->
             <div class="relative">
               <button
+                type="button"
                 id="page-selector"
                 onclick="togglePageSelector()"
                 title="Select or create notes"
                 class="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-mauve-600 dark:hover:text-mauve-400 transition-all duration-200 rounded-lg hover:bg-mauve-50 dark:hover:bg-mauve-900/20"
               >
                 <svg
+                  aria-hidden="true"
+                  focusable="false"
                   class="w-4 h-4"
                   fill="none"
                   stroke="currentColor"
@@ -167,6 +170,8 @@
                 </svg>
                 <span id="current-page-title">Untitled</span>
                 <svg
+                  aria-hidden="true"
+                  focusable="false"
                   class="w-4 h-4"
                   fill="none"
                   stroke="currentColor"
@@ -188,6 +193,7 @@
               >
                 <div class="p-4 border-b border-gray-200 dark:border-gray-700">
                   <button
+                    type="button"
                     onclick="createNewNote(); closePageSelector();"
                     title="Create a new note"
                     class="w-full bg-mauve-600 hover:bg-mauve-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 hover:shadow-lg hover:shadow-mauve-500/25"
@@ -214,11 +220,14 @@
 
             <!-- Copy Button -->
             <button
+              type="button"
               onclick="copyNoteContent()"
               title="Copy note content"
               class="p-2 text-gray-600 dark:text-gray-400 hover:text-mauve-600 dark:hover:text-mauve-400 transition-all duration-200 rounded-lg hover:bg-mauve-50 dark:hover:bg-mauve-900/20"
             >
               <svg
+                aria-hidden="true"
+                focusable="false"
                 class="w-5 h-5"
                 fill="none"
                 stroke="currentColor"
@@ -235,11 +244,14 @@
 
             <!-- Import Button -->
             <button
+              type="button"
               onclick="uploadFile()"
               title="Import file"
               class="p-2 text-gray-600 dark:text-gray-400 hover:text-mauve-600 dark:hover:text-mauve-400 transition-all duration-200 rounded-lg hover:bg-mauve-50 dark:hover:bg-mauve-900/20"
             >
               <svg
+                aria-hidden="true"
+                focusable="false"
                 class="w-5 h-5"
                 fill="none"
                 stroke="currentColor"
@@ -256,11 +268,14 @@
 
             <!-- Theme Toggle -->
             <button
+              type="button"
               onclick="toggleTheme()"
               title="Toggle dark mode"
               class="p-2 text-gray-600 dark:text-gray-400 hover:text-mauve-600 dark:hover:text-mauve-400 transition-all duration-200 rounded-lg hover:bg-mauve-50 dark:hover:bg-mauve-900/20"
             >
               <svg
+                aria-hidden="true"
+                focusable="false"
                 class="w-5 h-5 dark:hidden"
                 fill="none"
                 stroke="currentColor"
@@ -274,6 +289,8 @@
                 ></path>
               </svg>
               <svg
+                aria-hidden="true"
+                focusable="false"
                 class="w-5 h-5 hidden dark:block"
                 fill="none"
                 stroke="currentColor"
@@ -290,11 +307,14 @@
 
             <!-- Share Button -->
             <button
+              type="button"
               onclick="shareCurrentNote()"
               title="Share note"
               class="flex items-center gap-2 bg-mauve-600 hover:bg-mauve-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 hover:shadow-lg hover:shadow-mauve-500/25"
             >
               <svg
+                aria-hidden="true"
+                focusable="false"
                 class="w-4 h-4"
                 fill="none"
                 stroke="currentColor"
@@ -313,12 +333,15 @@
             <!-- More Options Menu -->
             <div class="relative">
               <button
+                type="button"
                 id="more-options-button"
                 onclick="toggleMoreOptions()"
                 title="More options"
                 class="p-2 text-gray-600 dark:text-gray-400 hover:text-mauve-600 dark:hover:text-mauve-400 transition-all duration-200 rounded-lg hover:bg-mauve-50 dark:hover:bg-mauve-900/20"
               >
                 <svg
+                  aria-hidden="true"
+                  focusable="false"
                   class="w-5 h-5"
                   fill="none"
                   stroke="currentColor"
@@ -340,10 +363,13 @@
               >
                 <div class="py-2">
                   <button
+                    type="button"
                     onclick="downloadNote('txt')"
                     class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-mauve-50 dark:hover:bg-mauve-900/20 hover:text-mauve-700 dark:hover:text-mauve-300 transition-all duration-200 flex items-center gap-2"
                   >
                     <svg
+                      aria-hidden="true"
+                      focusable="false"
                       class="w-4 h-4"
                       fill="none"
                       stroke="currentColor"
@@ -359,10 +385,13 @@
                     Export as .txt
                   </button>
                   <button
+                    type="button"
                     onclick="downloadNote('md')"
                     class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-mauve-50 dark:hover:bg-mauve-900/20 hover:text-mauve-700 dark:hover:text-mauve-300 transition-all duration-200 flex items-center gap-2"
                   >
                     <svg
+                      aria-hidden="true"
+                      focusable="false"
                       class="w-4 h-4"
                       fill="none"
                       stroke="currentColor"
@@ -379,10 +408,13 @@
                   </button>
                   <hr class="my-2 border-gray-200 dark:border-gray-700" />
                   <button
+                    type="button"
                     onclick="showAboutModal()"
                     class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-mauve-50 dark:hover:bg-mauve-900/20 hover:text-mauve-700 dark:hover:text-mauve-300 transition-all duration-200 flex items-center gap-2"
                   >
                     <svg
+                      aria-hidden="true"
+                      focusable="false"
                       class="w-4 h-4"
                       fill="none"
                       stroke="currentColor"
@@ -421,11 +453,14 @@
             <div class="flex items-center gap-2">
               <!-- Theme Toggle -->
               <button
+                type="button"
                 onclick="toggleTheme()"
                 title="Toggle dark mode"
                 class="p-2 text-gray-600 dark:text-gray-400 hover:text-mauve-600 dark:hover:text-mauve-400 transition-all duration-200 rounded-lg hover:bg-mauve-50 dark:hover:bg-mauve-900/20"
               >
                 <svg
+                  aria-hidden="true"
+                  focusable="false"
                   class="w-5 h-5 dark:hidden"
                   fill="none"
                   stroke="currentColor"
@@ -439,6 +474,8 @@
                   ></path>
                 </svg>
                 <svg
+                  aria-hidden="true"
+                  focusable="false"
                   class="w-5 h-5 hidden dark:block"
                   fill="none"
                   stroke="currentColor"
@@ -456,12 +493,15 @@
               <!-- More Options Menu -->
               <div class="relative">
                 <button
+                  type="button"
                   id="more-options-button-mobile"
                   onclick="toggleMoreOptions()"
                   title="More options"
                   class="p-2 text-gray-600 dark:text-gray-400 hover:text-mauve-600 dark:hover:text-mauve-400 transition-all duration-200 rounded-lg hover:bg-mauve-50 dark:hover:bg-mauve-900/20"
                 >
                   <svg
+                    aria-hidden="true"
+                    focusable="false"
                     class="w-5 h-5"
                     fill="none"
                     stroke="currentColor"
@@ -483,10 +523,13 @@
                 >
                   <div class="py-2">
                     <button
+                      type="button"
                       onclick="copyNoteContent(); closeMoreOptions();"
                       class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-mauve-50 dark:hover:bg-mauve-900/20 hover:text-mauve-700 dark:hover:text-mauve-300 transition-all duration-200 flex items-center gap-2"
                     >
                       <svg
+                        aria-hidden="true"
+                        focusable="false"
                         class="w-4 h-4"
                         fill="none"
                         stroke="currentColor"
@@ -502,10 +545,13 @@
                       Copy Note
                     </button>
                     <button
+                      type="button"
                       onclick="uploadFile(); closeMoreOptions();"
                       class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-mauve-50 dark:hover:bg-mauve-900/20 hover:text-mauve-700 dark:hover:text-mauve-300 transition-all duration-200 flex items-center gap-2"
                     >
                       <svg
+                        aria-hidden="true"
+                        focusable="false"
                         class="w-4 h-4"
                         fill="none"
                         stroke="currentColor"
@@ -522,10 +568,13 @@
                     </button>
                     <hr class="my-2 border-gray-200 dark:border-gray-700" />
                     <button
+                      type="button"
                       onclick="downloadNote('txt'); closeMoreOptions();"
                       class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-mauve-50 dark:hover:bg-mauve-900/20 hover:text-mauve-700 dark:hover:text-mauve-300 transition-all duration-200 flex items-center gap-2"
                     >
                       <svg
+                        aria-hidden="true"
+                        focusable="false"
                         class="w-4 h-4"
                         fill="none"
                         stroke="currentColor"
@@ -541,10 +590,13 @@
                       Export as .txt
                     </button>
                     <button
+                      type="button"
                       onclick="downloadNote('md'); closeMoreOptions();"
                       class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-mauve-50 dark:hover:bg-mauve-900/20 hover:text-mauve-700 dark:hover:text-mauve-300 transition-all duration-200 flex items-center gap-2"
                     >
                       <svg
+                        aria-hidden="true"
+                        focusable="false"
                         class="w-4 h-4"
                         fill="none"
                         stroke="currentColor"
@@ -561,10 +613,13 @@
                     </button>
                     <hr class="my-2 border-gray-200 dark:border-gray-700" />
                     <button
+                      type="button"
                       onclick="showAboutModal(); closeMoreOptions();"
                       class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-mauve-50 dark:hover:bg-mauve-900/20 hover:text-mauve-700 dark:hover:text-mauve-300 transition-all duration-200 flex items-center gap-2"
                     >
                       <svg
+                        aria-hidden="true"
+                        focusable="false"
                         class="w-4 h-4"
                         fill="none"
                         stroke="currentColor"
@@ -590,12 +645,15 @@
             <!-- Note Selector -->
             <div class="relative flex-1 min-w-0">
               <button
+                type="button"
                 id="page-selector-mobile"
                 onclick="togglePageSelector()"
                 title="Select or create notes"
                 class="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-mauve-600 dark:hover:text-mauve-400 transition-all duration-200 rounded-lg hover:bg-mauve-50 dark:hover:bg-mauve-900/20 w-full"
               >
                 <svg
+                  aria-hidden="true"
+                  focusable="false"
                   class="w-4 h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
@@ -612,6 +670,8 @@
                   >Untitled</span
                 >
                 <svg
+                  aria-hidden="true"
+                  focusable="false"
                   class="w-4 h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
@@ -633,6 +693,7 @@
               >
                 <div class="p-4 border-b border-gray-200 dark:border-gray-700">
                   <button
+                    type="button"
                     onclick="createNewNote(); closePageSelector();"
                     title="Create a new note"
                     class="w-full bg-mauve-600 hover:bg-mauve-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 hover:shadow-lg hover:shadow-mauve-500/25"
@@ -656,11 +717,14 @@
 
             <!-- Share Button -->
             <button
+              type="button"
               onclick="shareCurrentNote()"
               title="Share note"
               class="flex items-center gap-2 bg-mauve-600 hover:bg-mauve-700 text-white px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 hover:shadow-lg hover:shadow-mauve-500/25"
             >
               <svg
+                aria-hidden="true"
+                focusable="false"
                 class="w-4 h-4"
                 fill="none"
                 stroke="currentColor"
@@ -685,7 +749,7 @@
       <div class="w-full" id="main-content">
         <!-- Default content when no note is selected -->
         <div class="w-full">
-          <div class="w-full max-w-none">
+          <div class="editor-stack w-full max-w-none">
             <textarea
               id="main-textarea"
               placeholder="Start writing..."
@@ -700,8 +764,41 @@
                 box-sizing: border-box;
               "
               oninput="handleTextareaInput(this.value)"
-              autofocus
             ></textarea>
+            <section id="attachment-strip" class="attachment-strip" aria-label="Attachments">
+              <button
+                type="button"
+                class="attachment-strip-handle"
+                aria-expanded="false"
+                aria-controls="attachment-strip-body"
+                onclick="toggleStrip()"
+              >
+                <span class="attachment-strip-title">Attachments</span>
+                <span class="attachment-strip-count" data-count="0" hidden>0</span>
+                <span class="attachment-strip-caret" aria-hidden="true">
+                  <svg aria-hidden="true" focusable="false" viewBox="0 0 20 20" fill="none" stroke="currentColor">
+                    <path d="M5 7.5L10 12.5L15 7.5" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"></path>
+                  </svg>
+                </span>
+              </button>
+              <div
+                id="attachment-strip-body"
+                class="attachment-strip-body"
+                role="region"
+                aria-label="Note attachments"
+                aria-hidden="true"
+                hidden
+              >
+                <div class="attachment-grid" id="attachment-grid"></div>
+                <div class="attachment-strip-actions">
+                  <button type="button" class="attachment-add-btn" id="attachment-add-btn" onclick="addAttachment()">
+                    Add image
+                  </button>
+                  <span class="attachment-hint" id="attachment-hint">Or paste (Cmd+V) or drop images anywhere in this strip</span>
+                </div>
+                <input type="file" id="attachment-file-input" accept="image/*" multiple hidden>
+              </div>
+            </section>
           </div>
         </div>
       </div>
@@ -723,6 +820,7 @@
         </div>
         <div class="mt-6 flex justify-end gap-3">
           <button
+            type="button"
             onclick="closeShareModal()"
             class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-mauve-600 dark:hover:text-mauve-400 transition-all duration-200 rounded-lg hover:bg-mauve-50 dark:hover:bg-mauve-900/20"
           >
@@ -765,6 +863,7 @@
           </p>
           <div class="flex justify-center">
             <button
+              type="button"
               onclick="closeAboutModal()"
               class="px-6 py-2 bg-mauve-600 hover:bg-mauve-700 text-white rounded-lg text-sm font-medium transition-all duration-200 hover:shadow-lg hover:shadow-mauve-500/25"
             >

@@ -3,6 +3,17 @@ let currentNoteId = null;
 let notes = {};
 let isPageSelectorOpen = false;
 let isMoreOptionsOpen = false;
+let attachments = [];
+let attachmentDbPromise = null;
+let attachmentLoadToken = 0;
+let attachmentDragDepth = 0;
+let attachmentIsExpanded = false;
+let attachmentUiDisabled = false;
+let attachmentElements = {};
+const attachmentObjectUrls = new Map();
+const ATTACHMENT_DB_NAME = 'blankpage-attachments';
+const ATTACHMENT_DB_VERSION = 1;
+const ATTACHMENT_STORE_NAME = 'attachments';
 
 // Initialize app
 document.addEventListener('DOMContentLoaded', function() {
@@ -10,6 +21,7 @@ document.addEventListener('DOMContentLoaded', function() {
     setupEventListeners();
     setupKeyboardShortcuts();
     loadNotesFromStorage();
+    initAttachments();
     loadCurrentNote();
     updateSidebar();
     
@@ -168,6 +180,7 @@ function loadCurrentNote() {
         console.log('loadCurrentNote: Loading note from URL:', noteIdFromUrl);
         currentNoteId = noteIdFromUrl;
         loadNoteIntoEditor(notes[currentNoteId]);
+        loadAttachmentsForNote(currentNoteId);
         updateSidebar();
         return;
     }
@@ -181,6 +194,7 @@ function loadCurrentNote() {
         console.log('loadCurrentNote: Loading last edited note:', lastNoteId);
         currentNoteId = lastNoteId;
         loadNoteIntoEditor(notes[currentNoteId]);
+        loadAttachmentsForNote(currentNoteId);
         updateUrlForNote(currentNoteId);
         updateSidebar();
         return;
@@ -196,6 +210,7 @@ function loadCurrentNote() {
         
         // Load the note into editor
         loadNoteIntoEditor(mostRecentNote);
+        loadAttachmentsForNote(currentNoteId);
         
         // IMPORTANT: Update URL to include the note ID so we can resume properly
         updateUrlForNote(currentNoteId);
@@ -227,6 +242,7 @@ function createFirstNote() {
     notes[currentNoteId] = note;
     saveNotesToStorage();
     loadNoteIntoEditor(note);
+    loadAttachmentsForNote(currentNoteId);
     updateUrlForNote(currentNoteId);
     updateSidebar();
 }
@@ -265,6 +281,7 @@ function createNewNote() {
     
     // Load the new note into editor
     loadNoteIntoEditor(newNote);
+    loadAttachmentsForNote(currentNoteId);
     
     // Update URL and sidebar
     updateUrlForNote(currentNoteId);
@@ -279,6 +296,7 @@ function switchToNote(noteId) {
     
     // Load note into editor
     loadNoteIntoEditor(note);
+    loadAttachmentsForNote(noteId);
     
     // Update URL without page reload
     updateUrlForNote(noteId);
@@ -295,6 +313,9 @@ function deleteNote(noteId) {
     if (confirm('Are you sure you want to delete this note?')) {
         delete notes[noteId];
         saveNotesToStorage();
+        deleteAttachmentsByNote(noteId).catch(error => {
+            console.error('Error deleting attachments for note:', error);
+        });
         
         // If we're deleting the current note, create a new one
         if (currentNoteId === noteId) {
@@ -311,6 +332,633 @@ function deleteNote(noteId) {
         
         updateSidebar();
     }
+}
+
+function initAttachments() {
+    attachmentElements = {
+        strip: document.getElementById('attachment-strip'),
+        handle: document.querySelector('.attachment-strip-handle'),
+        count: document.querySelector('.attachment-strip-count'),
+        body: document.getElementById('attachment-strip-body'),
+        grid: document.getElementById('attachment-grid'),
+        addButton: document.getElementById('attachment-add-btn'),
+        fileInput: document.getElementById('attachment-file-input'),
+        hint: document.getElementById('attachment-hint')
+    };
+
+    if (!attachmentElements.strip || !attachmentElements.body || !attachmentElements.grid || !attachmentElements.fileInput) {
+        return;
+    }
+
+    setAttachmentExpanded(false, true);
+    renderAttachmentGrid();
+
+    attachmentElements.fileInput.addEventListener('change', handleAttachmentFileInputChange);
+    attachmentElements.strip.addEventListener('dragenter', handleAttachmentDragEnter);
+    attachmentElements.strip.addEventListener('dragover', handleAttachmentDragover);
+    attachmentElements.strip.addEventListener('dragleave', handleAttachmentDragLeave);
+    attachmentElements.strip.addEventListener('drop', handleAttachmentDrop);
+
+    document.addEventListener('paste', handleAttachmentPaste);
+    window.addEventListener('beforeunload', revokeAllAttachmentUrls);
+    window.addEventListener('resize', debounce(syncAttachmentStripHeight, 120));
+
+    openAttachDb().catch(error => {
+        console.error('Error opening attachment database:', error);
+        disableAttachmentUi('Attachments are unavailable in this browser');
+        return null;
+    });
+
+    if (currentNoteId) {
+        loadAttachmentsForNote(currentNoteId);
+    }
+}
+
+function openAttachDb() {
+    if (attachmentDbPromise) {
+        return attachmentDbPromise;
+    }
+
+    attachmentDbPromise = new Promise((resolve, reject) => {
+        if (!window.indexedDB) {
+            reject(new Error('IndexedDB is not supported'));
+            return;
+        }
+
+        const request = window.indexedDB.open(ATTACHMENT_DB_NAME, ATTACHMENT_DB_VERSION);
+
+        request.onupgradeneeded = function() {
+            const db = request.result;
+            const store = db.objectStoreNames.contains(ATTACHMENT_STORE_NAME)
+                ? request.transaction.objectStore(ATTACHMENT_STORE_NAME)
+                : db.createObjectStore(ATTACHMENT_STORE_NAME, { keyPath: 'id' });
+
+            if (!store.indexNames.contains('byNote')) {
+                store.createIndex('byNote', 'noteId', { unique: false });
+            }
+        };
+
+        request.onsuccess = function() {
+            resolve(request.result);
+        };
+
+        request.onerror = function() {
+            reject(request.error || new Error('Failed to open attachment database'));
+        };
+    });
+
+    return attachmentDbPromise;
+}
+
+async function attachPut(record) {
+    const db = await openAttachDb();
+    return new Promise((resolve, reject) => {
+        const request = db.transaction(ATTACHMENT_STORE_NAME, 'readwrite').objectStore(ATTACHMENT_STORE_NAME).put(record);
+        request.onsuccess = () => resolve(record);
+        request.onerror = () => reject(request.error || new Error('Failed to save attachment'));
+    });
+}
+
+async function attachGetByNote(noteId) {
+    const db = await openAttachDb();
+    return new Promise((resolve, reject) => {
+        const results = [];
+        const request = db.transaction(ATTACHMENT_STORE_NAME, 'readonly')
+            .objectStore(ATTACHMENT_STORE_NAME)
+            .index('byNote')
+            .openCursor(IDBKeyRange.only(noteId));
+
+        request.onsuccess = () => {
+            const cursor = request.result;
+            if (!cursor) {
+                resolve(results.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt)));
+                return;
+            }
+
+            results.push(cursor.value);
+            cursor.continue();
+        };
+
+        request.onerror = () => reject(request.error || new Error('Failed to load attachments'));
+    });
+}
+
+async function attachDelete(id) {
+    const db = await openAttachDb();
+    return new Promise((resolve, reject) => {
+        const request = db.transaction(ATTACHMENT_STORE_NAME, 'readwrite').objectStore(ATTACHMENT_STORE_NAME).delete(id);
+        request.onsuccess = () => resolve();
+        request.onerror = () => reject(request.error || new Error('Failed to delete attachment'));
+    });
+}
+
+async function attachDeleteByNote(noteId) {
+    const db = await openAttachDb();
+    return new Promise((resolve, reject) => {
+        const tx = db.transaction(ATTACHMENT_STORE_NAME, 'readwrite');
+        const store = tx.objectStore(ATTACHMENT_STORE_NAME);
+        const request = store.index('byNote').openCursor(IDBKeyRange.only(noteId));
+
+        request.onsuccess = () => {
+            const cursor = request.result;
+            if (!cursor) {
+                resolve();
+                return;
+            }
+
+            cursor.delete();
+            cursor.continue();
+        };
+
+        request.onerror = () => reject(request.error || new Error('Failed to delete note attachments'));
+        tx.onerror = () => reject(tx.error || new Error('Failed to delete note attachments'));
+    });
+}
+
+async function loadAttachmentsForNote(noteId) {
+    const loadToken = ++attachmentLoadToken;
+
+    revokeAllAttachmentUrls();
+    attachments = [];
+    attachmentDragDepth = 0;
+
+    if (attachmentElements.strip) {
+        attachmentElements.strip.classList.remove('is-dragover');
+    }
+
+    renderAttachmentGrid();
+    setAttachmentExpanded(false, true);
+
+    if (!noteId || attachmentUiDisabled) {
+        return;
+    }
+
+    try {
+        const rows = await attachGetByNote(noteId);
+        if (loadToken !== attachmentLoadToken || noteId !== currentNoteId) {
+            return;
+        }
+
+        attachments = rows;
+        renderAttachmentGrid();
+        setAttachmentExpanded(false, true);
+    } catch (error) {
+        console.error('Error loading attachments:', error);
+        disableAttachmentUi('Attachments are unavailable in this browser');
+    }
+}
+
+function renderAttachmentGrid() {
+    if (!attachmentElements.grid) {
+        return;
+    }
+
+    if (attachmentUiDisabled) {
+        attachmentElements.grid.innerHTML = '<div class="attachment-empty-state">Attachments are unavailable in this browser.</div>';
+        updateAttachmentCount();
+        syncAttachmentStripHeight();
+        return;
+    }
+
+    if (attachments.length === 0) {
+        attachmentElements.grid.innerHTML = `
+            <button type="button" class="attachment-mobile-add-tile" onclick="addAttachment()" aria-label="Add image">
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor">
+                    <path d="M10 4v12M4 10h12" stroke-linecap="round" stroke-width="1.8"></path>
+                </svg>
+                <span>Add image</span>
+            </button>
+            <div class="attachment-empty-state">Paste, drop, or add an image to keep it with this note.</div>
+        `;
+        updateAttachmentCount();
+        syncAttachmentStripHeight();
+        return;
+    }
+
+    const cards = attachments.map(attachment => {
+        const src = getAttachmentObjectUrl(attachment);
+        const filename = escapeHtml(attachment.filename || 'image');
+        const sizeLabel = escapeHtml(formatAttachmentSize(attachment.size || (attachment.blob ? attachment.blob.size : 0)));
+
+        return `
+            <article class="attachment-card" data-id="${attachment.id}">
+                <img src="${src}" alt="${filename}" loading="lazy" decoding="async" />
+                <div class="attachment-image-fallback" hidden>Preview unavailable</div>
+                <div class="attachment-card-actions">
+                    <button type="button" class="attachment-action" aria-label="Copy image" title="Copy image" onclick="copyAttachment('${attachment.id}')">
+                        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor">
+                            <rect x="7" y="7" width="9" height="9" rx="2" stroke-width="1.5"></rect>
+                            <path d="M5 12H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h7a1 1 0 0 1 1 1v1" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></path>
+                        </svg>
+                    </button>
+                    <button type="button" class="attachment-action" aria-label="Download image" title="Download image" onclick="downloadAttachment('${attachment.id}')">
+                        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor">
+                            <path d="M10 3.5v8m0 0l-3-3m3 3l3-3M4 14.5h12" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7"></path>
+                        </svg>
+                    </button>
+                    <button type="button" class="attachment-action" aria-label="Remove image" title="Remove image" onclick="removeAttachment('${attachment.id}')">
+                        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor">
+                            <path d="M5.5 5.5l9 9m0-9l-9 9" stroke-linecap="round" stroke-width="1.8"></path>
+                        </svg>
+                    </button>
+                </div>
+                <footer class="attachment-meta">
+                    <span class="attachment-name">${filename}</span>
+                    <span class="attachment-size">${sizeLabel}</span>
+                </footer>
+            </article>
+        `;
+    }).join('');
+
+    attachmentElements.grid.innerHTML = `
+        <button type="button" class="attachment-mobile-add-tile" onclick="addAttachment()" aria-label="Add image">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor">
+                <path d="M10 4v12M4 10h12" stroke-linecap="round" stroke-width="1.8"></path>
+            </svg>
+            <span>Add image</span>
+        </button>
+        ${cards}
+    `;
+
+    attachmentElements.grid.querySelectorAll('img').forEach(image => {
+        image.addEventListener('error', function() {
+            this.hidden = true;
+            const fallback = this.nextElementSibling;
+            if (fallback) {
+                fallback.hidden = false;
+            }
+        }, { once: true });
+    });
+
+    updateAttachmentCount();
+    syncAttachmentStripHeight();
+}
+
+function toggleStrip(force) {
+    if (attachmentUiDisabled) {
+        return;
+    }
+
+    const nextState = typeof force === 'boolean' ? force : !attachmentIsExpanded;
+    setAttachmentExpanded(nextState, false);
+}
+
+function setAttachmentExpanded(expanded, immediate) {
+    if (!attachmentElements.strip || !attachmentElements.handle || !attachmentElements.body) {
+        attachmentIsExpanded = expanded;
+        return;
+    }
+
+    const strip = attachmentElements.strip;
+    const body = attachmentElements.body;
+    const handle = attachmentElements.handle;
+    const collapsedHeight = handle.offsetHeight || 56;
+    const reducedMotion = immediate || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    attachmentIsExpanded = expanded;
+    handle.setAttribute('aria-expanded', String(expanded));
+
+    if (expanded) {
+        body.hidden = false;
+        body.setAttribute('aria-hidden', 'false');
+        strip.classList.add('is-expanded');
+        syncAttachmentStripHeight();
+        return;
+    }
+
+    strip.style.setProperty('--attachment-strip-height', `${collapsedHeight}px`);
+    strip.classList.remove('is-expanded');
+    body.setAttribute('aria-hidden', 'true');
+
+    if (reducedMotion) {
+        body.hidden = true;
+        return;
+    }
+
+    window.setTimeout(() => {
+        if (!attachmentIsExpanded && attachmentElements.body) {
+            attachmentElements.body.hidden = true;
+        }
+    }, 260);
+}
+
+function syncAttachmentStripHeight() {
+    if (!attachmentElements.strip || !attachmentElements.handle || !attachmentElements.body) {
+        return;
+    }
+
+    const handleHeight = attachmentElements.handle.offsetHeight || 56;
+    const bodyHeight = attachmentElements.body.scrollHeight || 0;
+    const nextHeight = attachmentIsExpanded ? handleHeight + bodyHeight : handleHeight;
+    attachmentElements.strip.style.setProperty('--attachment-strip-height', `${nextHeight}px`);
+}
+
+async function handleAttachmentPaste(event) {
+    if (attachmentUiDisabled || !currentNoteId || !event.clipboardData) {
+        return;
+    }
+
+    const files = Array.from(event.clipboardData.items || [])
+        .filter(item => item.kind === 'file' && item.type.startsWith('image/'))
+        .map(item => item.getAsFile())
+        .filter(Boolean);
+
+    if (files.length === 0) {
+        return;
+    }
+
+    event.preventDefault();
+    for (const file of files) {
+        await addAttachmentFile(file);
+    }
+}
+
+function handleAttachmentDragEnter(event) {
+    if (!hasImageFiles(event.dataTransfer)) {
+        return;
+    }
+
+    attachmentDragDepth += 1;
+    if (attachmentElements.strip) {
+        attachmentElements.strip.classList.add('is-dragover');
+    }
+}
+
+function handleAttachmentDragover(event) {
+    if (!hasImageFiles(event.dataTransfer)) {
+        return;
+    }
+
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'copy';
+    if (attachmentElements.strip) {
+        attachmentElements.strip.classList.add('is-dragover');
+    }
+}
+
+function handleAttachmentDragLeave(event) {
+    if (!hasImageFiles(event.dataTransfer)) {
+        return;
+    }
+
+    attachmentDragDepth = Math.max(0, attachmentDragDepth - 1);
+    if (attachmentDragDepth === 0 && attachmentElements.strip && !attachmentElements.strip.contains(event.relatedTarget)) {
+        attachmentElements.strip.classList.remove('is-dragover');
+    }
+}
+
+async function handleAttachmentDrop(event) {
+    if (!hasImageFiles(event.dataTransfer)) {
+        return;
+    }
+
+    event.preventDefault();
+    attachmentDragDepth = 0;
+
+    if (attachmentElements.strip) {
+        attachmentElements.strip.classList.remove('is-dragover');
+    }
+
+    const files = Array.from(event.dataTransfer.files || []).filter(file => file.type.startsWith('image/'));
+    for (const file of files) {
+        await addAttachmentFile(file);
+    }
+}
+
+function handleAttachmentFileInputChange(event) {
+    const files = Array.from(event.target.files || []).filter(file => file.type.startsWith('image/'));
+    event.target.value = '';
+
+    files.reduce((promise, file) => {
+        return promise.then(() => addAttachmentFile(file));
+    }, Promise.resolve());
+}
+
+function addAttachment() {
+    if (attachmentUiDisabled || !attachmentElements.fileInput) {
+        return;
+    }
+
+    attachmentElements.fileInput.click();
+}
+
+async function addAttachmentFile(file) {
+    if (attachmentUiDisabled || !currentNoteId || !file || !file.type.startsWith('image/')) {
+        return;
+    }
+
+    const record = {
+        id: generateAttachmentId(),
+        noteId: currentNoteId,
+        blob: file,
+        mime: file.type,
+        filename: file.name || `image-${Date.now()}.${(file.type.split('/')[1] || 'png')}`,
+        size: file.size,
+        createdAt: new Date().toISOString()
+    };
+
+    const shouldAutoExpand = attachments.length === 0 && !attachmentIsExpanded;
+
+    attachments = [...attachments, record];
+    renderAttachmentGrid();
+
+    try {
+        await attachPut(record);
+
+        if (record.noteId === currentNoteId && shouldAutoExpand) {
+            toggleStrip(true);
+        } else {
+            syncAttachmentStripHeight();
+        }
+    } catch (error) {
+        attachments = attachments.filter(attachment => attachment.id !== record.id);
+        revokeAttachmentUrl(record.id);
+        renderAttachmentGrid();
+
+        if (isQuotaExceededError(error)) {
+            showToast('Storage full — remove images to free space');
+            return;
+        }
+
+        console.error('Error saving attachment:', error);
+        showToast('Failed to save image');
+    }
+}
+
+async function removeAttachment(id) {
+    const index = attachments.findIndex(attachment => attachment.id === id);
+    if (index === -1) {
+        return;
+    }
+
+    const [removed] = attachments.splice(index, 1);
+    revokeAttachmentUrl(id);
+    renderAttachmentGrid();
+
+    try {
+        await attachDelete(id);
+    } catch (error) {
+        console.error('Error removing attachment:', error);
+        attachments.splice(index, 0, removed);
+        renderAttachmentGrid();
+        showToast('Failed to remove image');
+    }
+}
+
+async function deleteAttachmentsByNote(noteId) {
+    if (!noteId || attachmentUiDisabled) {
+        return;
+    }
+
+    if (currentNoteId === noteId) {
+        revokeAllAttachmentUrls();
+        attachments = [];
+        renderAttachmentGrid();
+    }
+
+    await attachDeleteByNote(noteId);
+}
+
+async function copyAttachment(id) {
+    const attachment = attachments.find(item => item.id === id);
+    if (!attachment) {
+        return;
+    }
+
+    try {
+        if (!navigator.clipboard || !navigator.clipboard.write || !window.ClipboardItem) {
+            throw new Error('Clipboard image write unsupported');
+        }
+
+        await navigator.clipboard.write([
+            new ClipboardItem({
+                [attachment.mime || attachment.blob.type || 'image/png']: attachment.blob
+            })
+        ]);
+        showToast('Image copied to clipboard');
+    } catch (error) {
+        console.error('Error copying attachment:', error);
+        showToast('Clipboard copy unavailable — downloading image instead');
+        downloadAttachment(id);
+    }
+}
+
+function downloadAttachment(id) {
+    const attachment = attachments.find(item => item.id === id);
+    if (!attachment) {
+        return;
+    }
+
+    const url = URL.createObjectURL(attachment.blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = attachment.filename || 'image';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
+function getAttachmentObjectUrl(attachment) {
+    if (!attachmentObjectUrls.has(attachment.id)) {
+        attachmentObjectUrls.set(attachment.id, URL.createObjectURL(attachment.blob));
+    }
+
+    return attachmentObjectUrls.get(attachment.id);
+}
+
+function revokeAttachmentUrl(id) {
+    const url = attachmentObjectUrls.get(id);
+    if (url) {
+        URL.revokeObjectURL(url);
+        attachmentObjectUrls.delete(id);
+    }
+}
+
+function revokeAllAttachmentUrls() {
+    attachmentObjectUrls.forEach(url => {
+        URL.revokeObjectURL(url);
+    });
+    attachmentObjectUrls.clear();
+}
+
+function updateAttachmentCount() {
+    if (!attachmentElements.count) {
+        return;
+    }
+
+    attachmentElements.count.textContent = String(attachments.length);
+    attachmentElements.count.dataset.count = String(attachments.length);
+    attachmentElements.count.hidden = attachments.length === 0;
+}
+
+function disableAttachmentUi(message) {
+    attachmentUiDisabled = true;
+    attachments = [];
+    revokeAllAttachmentUrls();
+
+    if (!attachmentElements.strip || !attachmentElements.grid) {
+        return;
+    }
+
+    attachmentElements.strip.classList.add('is-disabled');
+    if (attachmentElements.addButton) {
+        attachmentElements.addButton.disabled = true;
+    }
+    if (attachmentElements.handle) {
+        attachmentElements.handle.disabled = true;
+    }
+    if (attachmentElements.hint) {
+        attachmentElements.hint.textContent = message;
+    }
+
+    renderAttachmentGrid();
+    setAttachmentExpanded(true, true);
+}
+
+function generateAttachmentId() {
+    return `attachment_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+}
+
+function formatAttachmentSize(size) {
+    if (!size) {
+        return '0 B';
+    }
+
+    if (size < 1024) {
+        return `${size} B`;
+    }
+
+    if (size < 1024 * 1024) {
+        return `${(size / 1024).toFixed(1)} KB`;
+    }
+
+    return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function escapeHtml(value) {
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function hasImageFiles(dataTransfer) {
+    if (!dataTransfer) {
+        return false;
+    }
+
+    if (Array.from(dataTransfer.files || []).some(file => file.type.startsWith('image/'))) {
+        return true;
+    }
+
+    return Array.from(dataTransfer.items || []).some(item => item.kind === 'file' && item.type.startsWith('image/'));
+}
+
+function isQuotaExceededError(error) {
+    return Boolean(error && (error.name === 'QuotaExceededError' || error.name === 'NS_ERROR_DOM_QUOTA_REACHED'));
 }
 
 function updateSidebar() {
@@ -657,26 +1305,6 @@ function copyShareUrl() {
     showToast('Share link copied to clipboard');
 }
 
-function copyNoteContent() {
-    if (!currentNoteId || !notes[currentNoteId]) return;
-    
-    const content = notes[currentNoteId].content;
-    navigator.clipboard.writeText(content).then(() => {
-        showToast('Note content copied to clipboard');
-        closeShareModal();
-    }).catch(() => {
-        // Fallback for older browsers
-        const textArea = document.createElement('textarea');
-        textArea.value = content;
-        document.body.appendChild(textArea);
-        textArea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textArea);
-        showToast('Note content copied to clipboard');
-        closeShareModal();
-    });
-}
-
 function openShareModal() {
     const modal = document.getElementById('share-modal');
     modal.classList.remove('hidden');
@@ -984,6 +1612,11 @@ window.closeMoreOptions = closeMoreOptions;
 window.updateWordCount = updateWordCount;
 window.updatePageTitle = updatePageTitle;
 window.saveToLocalStorage = saveToLocalStorage;
+window.addAttachment = addAttachment;
+window.removeAttachment = removeAttachment;
+window.toggleStrip = toggleStrip;
+window.copyAttachment = copyAttachment;
+window.downloadAttachment = downloadAttachment;
 window.shareCurrentNote = shareCurrentNote;
 window.createShareLink = createShareLink;
 window.copyShareUrl = copyShareUrl;
@@ -997,4 +1630,3 @@ window.deleteCurrentNote = deleteCurrentNote;
 window.showAboutModal = showAboutModal;
 window.closeAboutModal = closeAboutModal;
 window.closeMoreOptions = closeMoreOptions;
-

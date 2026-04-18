@@ -63,7 +63,6 @@ textarea {
 /* Modern, elegant improvements */
 body {
   background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-  transition: all 0.4s ease;
   transition: background-color 0.4s ease, color 0.2s ease;
 }
 
@@ -435,7 +434,497 @@ button {
     transition: opacity 0.2s ease;
   }
 
-  .tooltip:hover::after {
+.tooltip:hover::after {
     opacity: 1;
+  }
+}
+
+.editor-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.attachment-strip {
+  --attachment-strip-height: 56px;
+  position: relative;
+  width: 100%;
+  max-height: var(--attachment-strip-height);
+  margin: 0 auto 2rem;
+  overflow: hidden;
+  border-radius: 16px;
+  border: 1px solid rgba(23, 28, 48, 0.12);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.54));
+  box-shadow: 0 18px 38px rgba(110, 78, 218, 0.08);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  transition: max-height 260ms cubic-bezier(0.22, 1, 0.36, 1), border-color 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
+}
+
+.dark .attachment-strip {
+  border-color: rgba(255, 255, 255, 0.12);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03));
+  box-shadow: 0 22px 42px rgba(3, 4, 10, 0.32);
+}
+
+.attachment-strip.is-expanded {
+  border-color: rgba(110, 78, 218, 0.22);
+}
+
+.dark .attachment-strip.is-expanded {
+  border-color: rgba(164, 139, 255, 0.28);
+}
+
+.attachment-strip.is-dragover {
+  border-color: rgba(110, 78, 218, 0.42);
+  box-shadow: 0 0 0 1px rgba(110, 78, 218, 0.18), 0 20px 40px rgba(110, 78, 218, 0.16);
+}
+
+.dark .attachment-strip.is-dragover {
+  border-color: rgba(164, 139, 255, 0.52);
+  box-shadow: 0 0 0 1px rgba(164, 139, 255, 0.24), 0 22px 44px rgba(3, 4, 10, 0.36);
+}
+
+.attachment-strip.is-disabled {
+  opacity: 0.82;
+}
+
+.attachment-strip-handle {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  justify-content: flex-start;
+  width: 100%;
+  min-height: 56px;
+  padding: 0.9rem 1rem;
+  border: 0;
+  border-radius: 16px;
+  background: transparent;
+  color: #161928;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  box-shadow: none;
+}
+
+.dark .attachment-strip-handle {
+  color: #f6f4ff;
+}
+
+.attachment-strip-handle:hover,
+.attachment-strip-handle:focus-visible {
+  transform: none;
+  box-shadow: none;
+}
+
+.attachment-strip-handle:focus-visible,
+.attachment-add-btn:focus-visible,
+.attachment-mobile-add-tile:focus-visible,
+.attachment-action:focus-visible {
+  outline: 2px solid rgba(110, 78, 218, 0.4);
+  outline-offset: 2px;
+}
+
+.dark .attachment-strip-handle:focus-visible,
+.dark .attachment-add-btn:focus-visible,
+.dark .attachment-mobile-add-tile:focus-visible,
+.dark .attachment-action:focus-visible {
+  outline-color: rgba(164, 139, 255, 0.45);
+}
+
+.attachment-strip-title {
+  flex: 0 0 auto;
+}
+
+.attachment-strip-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.65rem;
+  min-height: 1.65rem;
+  padding: 0 0.45rem;
+  border-radius: 999px;
+  background: rgba(110, 78, 218, 0.12);
+  color: #6e4eda;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.dark .attachment-strip-count {
+  background: rgba(164, 139, 255, 0.16);
+  color: #cabdff;
+}
+
+.attachment-strip-caret {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  color: rgba(22, 25, 40, 0.66);
+  transition: transform 180ms ease, color 180ms ease;
+}
+
+.dark .attachment-strip-caret {
+  color: rgba(246, 244, 255, 0.68);
+}
+
+.attachment-strip-caret svg {
+  width: 100%;
+  height: 100%;
+}
+
+.attachment-strip.is-expanded .attachment-strip-caret {
+  transform: rotate(180deg);
+  color: #6e4eda;
+}
+
+.dark .attachment-strip.is-expanded .attachment-strip-caret {
+  color: #a48bff;
+}
+
+.attachment-strip-body {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  padding: 0 1rem 1rem;
+  opacity: 0;
+  transform: translateY(-6px);
+  pointer-events: none;
+  transition: opacity 180ms ease, transform 260ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.attachment-strip.is-expanded .attachment-strip-body {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.attachment-strip.is-dragover .attachment-strip-body::before {
+  content: 'Drop images here';
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed rgba(110, 78, 218, 0.4);
+  border-radius: 13px;
+  background: rgba(110, 78, 218, 0.08);
+  color: #6e4eda;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 600;
+  z-index: 2;
+}
+
+.dark .attachment-strip.is-dragover .attachment-strip-body::before {
+  border-color: rgba(164, 139, 255, 0.44);
+  background: rgba(164, 139, 255, 0.1);
+  color: #cabdff;
+}
+
+.attachment-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+  gap: 0.85rem;
+  min-height: 0;
+}
+
+.attachment-mobile-add-tile {
+  display: none;
+}
+
+.attachment-card,
+.attachment-mobile-add-tile {
+  position: relative;
+  min-height: 168px;
+  border-radius: 16px;
+  border: 1px solid rgba(23, 28, 48, 0.1);
+  background: rgba(255, 255, 255, 0.7);
+  overflow: hidden;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.32);
+}
+
+.dark .attachment-card,
+.dark .attachment-mobile-add-tile {
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.attachment-card img {
+  display: block;
+  width: 100%;
+  height: 112px;
+  object-fit: cover;
+  background: rgba(110, 78, 218, 0.08);
+}
+
+.dark .attachment-card img {
+  background: rgba(164, 139, 255, 0.08);
+}
+
+.attachment-image-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 112px;
+  padding: 0.75rem;
+  background: linear-gradient(135deg, rgba(110, 78, 218, 0.08), rgba(110, 78, 218, 0.02));
+  color: rgba(22, 25, 40, 0.66);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+.dark .attachment-image-fallback {
+  background: linear-gradient(135deg, rgba(164, 139, 255, 0.1), rgba(164, 139, 255, 0.03));
+  color: rgba(246, 244, 255, 0.64);
+}
+
+.attachment-card-actions {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.6rem;
+  display: flex;
+  gap: 0.35rem;
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: opacity 180ms ease, transform 180ms ease;
+  z-index: 1;
+}
+
+.attachment-card:hover .attachment-card-actions,
+.attachment-card:focus-within .attachment-card-actions {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.attachment-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: 0;
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.9);
+  color: #161928;
+  cursor: pointer;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
+}
+
+.dark .attachment-action {
+  background: rgba(15, 23, 42, 0.88);
+  color: #f6f4ff;
+  box-shadow: 0 12px 30px rgba(3, 4, 10, 0.3);
+}
+
+.attachment-action svg {
+  width: 0.95rem;
+  height: 0.95rem;
+}
+
+.attachment-action:hover {
+  transform: translateY(-1px);
+  background: rgba(110, 78, 218, 0.12);
+  color: #6e4eda;
+}
+
+.dark .attachment-action:hover {
+  background: rgba(164, 139, 255, 0.16);
+  color: #cabdff;
+}
+
+.attachment-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.75rem 0.8rem 0.85rem;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
+}
+
+.attachment-name {
+  color: #161928;
+  font-size: 0.83rem;
+  font-weight: 600;
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dark .attachment-name {
+  color: #f6f4ff;
+}
+
+.attachment-size {
+  color: rgba(22, 25, 40, 0.6);
+  font-size: 0.76rem;
+}
+
+.dark .attachment-size {
+  color: rgba(246, 244, 255, 0.6);
+}
+
+.attachment-empty-state {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 132px;
+  padding: 1rem;
+  border: 1px dashed rgba(110, 78, 218, 0.22);
+  border-radius: 16px;
+  background: rgba(110, 78, 218, 0.04);
+  color: rgba(22, 25, 40, 0.68);
+  text-align: center;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
+  font-size: 0.9rem;
+}
+
+.dark .attachment-empty-state {
+  border-color: rgba(164, 139, 255, 0.2);
+  background: rgba(164, 139, 255, 0.05);
+  color: rgba(246, 244, 255, 0.66);
+}
+
+.attachment-strip-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.attachment-add-btn,
+.attachment-mobile-add-tile {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #6e4eda;
+}
+
+.attachment-add-btn {
+  min-height: 44px;
+  padding: 0.72rem 1rem;
+  border: 1px solid rgba(110, 78, 218, 0.2);
+  border-radius: 13px;
+  background: rgba(110, 78, 218, 0.08);
+  cursor: pointer;
+  box-shadow: none;
+}
+
+.dark .attachment-add-btn {
+  border-color: rgba(164, 139, 255, 0.22);
+  background: rgba(164, 139, 255, 0.1);
+  color: #cabdff;
+}
+
+.attachment-add-btn:hover,
+.attachment-mobile-add-tile:hover {
+  box-shadow: none;
+}
+
+.attachment-hint {
+  color: rgba(22, 25, 40, 0.64);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+
+.dark .attachment-hint {
+  color: rgba(246, 244, 255, 0.62);
+}
+
+.attachment-mobile-add-tile {
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  width: 132px;
+  min-width: 132px;
+  padding: 1rem;
+  border: 1px dashed rgba(110, 78, 218, 0.28);
+  background: rgba(110, 78, 218, 0.06);
+  cursor: pointer;
+}
+
+.attachment-mobile-add-tile svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.dark .attachment-mobile-add-tile {
+  border-color: rgba(164, 139, 255, 0.26);
+  background: rgba(164, 139, 255, 0.08);
+}
+
+.attachment-strip.is-disabled .attachment-add-btn,
+.attachment-strip.is-disabled .attachment-mobile-add-tile,
+.attachment-strip.is-disabled .attachment-strip-handle {
+  cursor: not-allowed;
+}
+
+.attachment-strip.is-disabled .attachment-add-btn,
+.attachment-strip.is-disabled .attachment-mobile-add-tile {
+  opacity: 0.6;
+}
+
+@media (max-width: 767px) {
+  .attachment-strip {
+    margin-bottom: 1.5rem;
+  }
+
+  .attachment-grid {
+    display: flex;
+    gap: 0.75rem;
+    overflow-x: auto;
+    padding-bottom: 0.1rem;
+    scroll-snap-type: x proximity;
+  }
+
+  .attachment-card,
+  .attachment-mobile-add-tile,
+  .attachment-empty-state {
+    flex: 0 0 132px;
+    scroll-snap-align: start;
+  }
+
+  .attachment-mobile-add-tile {
+    display: inline-flex;
+  }
+
+  .attachment-card-actions {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .attachment-strip-actions {
+    align-items: flex-start;
+  }
+}
+
+@media (pointer: coarse) {
+  .attachment-card-actions {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .attachment-strip,
+  .attachment-strip-body,
+  .attachment-strip-caret,
+  .attachment-card-actions,
+  .attachment-action,
+  .attachment-add-btn,
+  .attachment-mobile-add-tile {
+    transition: none !important;
   }
 }
