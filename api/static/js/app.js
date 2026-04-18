@@ -1484,7 +1484,9 @@ function deleteCurrentNote() {
 // Toast notification
 function showToast(message) {
     const toast = document.createElement('div');
-    toast.className = 'fixed bottom-4 right-4 bg-green-600 text-white px-4 py-3 rounded-lg shadow-lg z-50 transition-all duration-300 transform translate-y-0 opacity-100 font-sans text-sm';
+    toast.className = 'fixed right-4 bg-green-600 text-white px-4 py-3 rounded-lg shadow-lg transition-all duration-300 transform translate-y-0 opacity-100 font-sans text-sm';
+    toast.style.zIndex = '60';
+    toast.style.bottom = 'calc(var(--attachment-strip-safe-space, 56px) + 1rem)';
     toast.textContent = message;
     toast.setAttribute('role', 'alert');
     toast.setAttribute('aria-live', 'polite');
