@@ -229,11 +229,11 @@ function getNoteTitleFromContent(content) {
 
 function createFirstNote() {
     currentNoteId = generateNoteId();
-    const defaultContent = 'Welcome to blank.ashref.tn\n\nStart typing to create your first note...';
+    const defaultContent = 'Welcome to blank.achraf.tn\n\nStart typing to create your first note...';
     
     const note = {
         id: currentNoteId,
-        title: 'Welcome to blank.ashref.tn',
+        title: 'Welcome to blank.achraf.tn',
         content: defaultContent,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
@@ -1193,7 +1193,7 @@ function updatePageTitle(content) {
     }
     
     // Update browser title
-    document.title = title === 'Untitled' ? 'Blank.ashref.tn' : `${title} - Blank.ashref.tn`;
+    document.title = title === 'Untitled' ? 'Blank.achraf.tn' : `${title} - Blank.achraf.tn`;
 }
 
 // Share functionality

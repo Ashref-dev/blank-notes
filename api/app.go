@@ -250,7 +250,7 @@ func cleanupExpiredNotes() {
 // Handlers
 func indexHandler(c *gin.Context) {
 	c.HTML(http.StatusOK, "index.html", gin.H{
-		"title": "blank.ashref.tn",
+		"title": "blank.achraf.tn",
 	})
 }
 
@@ -363,7 +363,7 @@ func getSharedNoteHandler(c *gin.Context) {
 	imgURL := fmt.Sprintf("%s://%s/static/og.jpg", proto, host)
 	desc := strings.TrimSpace(sharedNote.Note.Content)
 	if desc == "" {
-		desc = "A shared note from blank.ashref.tn"
+		desc = "A shared note from blank.achraf.tn"
 	}
 	if len(desc) > 180 {
 		desc = desc[:180] + "..."
