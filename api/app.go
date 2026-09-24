@@ -1,25 +1,28 @@
 package handler
 
 import (
-	"embed"
+	"encoding/json"
+	"errors"
 	"fmt"
-	"html/template"
-	"io/fs"
+	"html"
+	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
+	"unicode/utf8"
+
+	"blankpage_app/og"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
-
-//go:embed templates/* static/*
-var embeddedFS embed.FS
 
 var (
 	db           *gorm.DB
@@ -46,10 +49,22 @@ type SharedNote struct {
 
 // Request structures for sharing
 type ShareRequest struct {
-	Title       string `json:"title"`
-	Content     string `json:"content"`
-	ExpiryHours int    `json:"expiryHours"`
+	Title       string     `json:"title"`
+	Content     string     `json:"content"`
+	ExpiryHours int        `json:"expiryHours"`
+	ExpiresAt   *time.Time `json:"expiresAt"` // optional exact expiry; takes precedence over ExpiryHours
 }
+
+// SharedNoteResponse is the public, read-only view of a shared note.
+type SharedNoteResponse struct {
+	ID        string     `json:"id"`
+	Title     string     `json:"title"`
+	Content   string     `json:"content"`
+	CreatedAt time.Time  `json:"createdAt"`
+	ExpiresAt *time.Time `json:"expiresAt"`
+}
+
+const maxShareBodyBytes = 1 << 20 // 1 MiB
 
 type ShareResponse struct {
 	ShareID   string     `json:"shareId"`
@@ -70,42 +85,6 @@ func (s *SharedNote) BeforeCreate(tx *gorm.DB) error {
 		s.ID = uuid.New()
 	}
 	return nil
-}
-
-// Helper functions
-func (n *Note) GetTitle() string {
-	if n.Title != "" {
-		return n.Title
-	}
-	// Auto-generate title from first line of content
-	if len(n.Content) > 50 {
-		return n.Content[:50] + "..."
-	}
-	if n.Content == "" {
-		return "Untitled Note"
-	}
-	return n.Content
-}
-
-func (n *Note) WordCount() int {
-	if n.Content == "" {
-		return 0
-	}
-	words := 0
-	inWord := false
-	for _, char := range n.Content {
-		if char == ' ' || char == '\n' || char == '\t' {
-			inWord = false
-		} else if !inWord {
-			words++
-			inWord = true
-		}
-	}
-	return words
-}
-
-func (n *Note) CharCount() int {
-	return len(n.Content)
 }
 
 // Handler for Vercel serverless function
@@ -150,20 +129,6 @@ func NewRouter() *gin.Engine {
 	r := gin.New()
 	r.Use(gin.Recovery())
 
-	// Templates from embedded FS
-	if tmpl, err := template.ParseFS(embeddedFS, "templates/*.html"); err == nil {
-		r.SetHTMLTemplate(tmpl)
-	} else {
-		log.Printf("template parse error: %v", err)
-	}
-
-	// Static files from embedded FS
-	if sub, err := fs.Sub(embeddedFS, "static"); err == nil {
-		r.StaticFS("/static", http.FS(sub))
-	} else {
-		log.Printf("static fs error: %v", err)
-	}
-
 	// CORS middleware
 	r.Use(func(c *gin.Context) {
 		c.Header("Access-Control-Allow-Origin", "*")
@@ -180,27 +145,23 @@ func NewRouter() *gin.Engine {
 	return r
 }
 
+// The React app (web/) is served as static files by Vercel; only these routes reach Go.
 func setupRoutes(r *gin.Engine) {
-	// Main page
-	r.GET("/", indexHandler)
-
 	// API routes
 	api := r.Group("/api")
 	{
 		// Sharing - local storage to backend
 		api.POST("/share", shareNoteHandler)
-		api.GET("/shared/:shareId", getSharedNoteHandler)
+		api.GET("/shared/:shareId", getSharedNoteJSONHandler)
 
-		// Download routes
-		api.GET("/notes/:id/download/:format", downloadNoteHandler)
-
-		// Search and stats
-		api.GET("/search", searchNotesHandler)
-		api.GET("/stats", statsHandler)
+		// Link-preview images: /api/og/site.png and /api/og/<shareId>.png
+		api.GET("/og/:name", ogImageHandler)
+		api.HEAD("/og/:name", ogImageHandler)
 	}
 
-	// Shared note view (HTML)
-	r.GET("/shared/:shareId", getSharedNoteHandler)
+	// Shared note page: the React app shell with per-note link-preview meta tags
+	r.GET("/shared/:shareId", sharedNotePageHandler)
+	r.HEAD("/shared/:shareId", sharedNotePageHandler)
 
 	// Health check endpoint
 	r.GET("/health", func(c *gin.Context) {
@@ -248,21 +209,25 @@ func cleanupExpiredNotes() {
 }
 
 // Handlers
-func indexHandler(c *gin.Context) {
-	c.HTML(http.StatusOK, "index.html", gin.H{
-		"title": "blank.achraf.tn",
-	})
-}
-
 func shareNoteHandler(c *gin.Context) {
 	if db == nil { // sharing disabled when no database
 		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Sharing disabled"})
 		return
 	}
 
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxShareBodyBytes)
 	var req ShareRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
+		var tooLarge *http.MaxBytesError
+		if errors.As(err, &tooLarge) {
+			c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "Note is too large to share"})
+			return
+		}
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+		return
+	}
+	if strings.TrimSpace(req.Title) == "" && strings.TrimSpace(req.Content) == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Note is empty"})
 		return
 	}
 
@@ -270,8 +235,21 @@ func shareNoteHandler(c *gin.Context) {
 	shareID := uuid.New()
 
 	var expiresAt *time.Time
-	if req.ExpiryHours > 0 {
-		expiry := time.Now().Add(time.Duration(req.ExpiryHours) * time.Hour)
+	now := time.Now()
+	switch {
+	case req.ExpiresAt != nil:
+		if !req.ExpiresAt.After(now.Add(30*time.Second)) || req.ExpiresAt.After(now.AddDate(10, 0, 0)) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Expiry must be in the future"})
+			return
+		}
+		expiry := req.ExpiresAt.UTC()
+		expiresAt = &expiry
+	case req.ExpiryHours > 0:
+		if req.ExpiryHours > 24*365*10 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Expiry must be in the future"})
+			return
+		}
+		expiry := now.Add(time.Duration(req.ExpiryHours) * time.Hour)
 		expiresAt = &expiry
 	}
 
@@ -318,154 +296,294 @@ func shareNoteHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
-func getSharedNoteHandler(c *gin.Context) {
+// lookupSharedNote returns the note behind a share id and the HTTP status that describes it.
+func lookupSharedNote(shareID string) (*SharedNoteResponse, int) {
 	if db == nil { // sharing disabled when no database
-		c.HTML(http.StatusServiceUnavailable, "shared_not_found.html", gin.H{"title": "Sharing Disabled"})
-		return
+		return nil, http.StatusServiceUnavailable
 	}
-
-	shareID := c.Param("shareId")
-
 	shareUUID, err := uuid.Parse(shareID)
 	if err != nil {
-		c.HTML(http.StatusNotFound, "shared_not_found.html", gin.H{
-			"title": "Note Not Found",
-		})
-		return
+		return nil, http.StatusNotFound
 	}
 
 	var sharedNote SharedNote
 	if err := db.Preload("Note").Where("id = ?", shareUUID).First(&sharedNote).Error; err != nil {
-		c.HTML(http.StatusNotFound, "shared_not_found.html", gin.H{
-			"title": "Note Not Found",
-		})
-		return
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, http.StatusNotFound
+		}
+		log.Printf("Error loading shared note %s: %v", shareUUID, err)
+		return nil, http.StatusInternalServerError
 	}
-
-	// Check if expired
 	if sharedNote.ExpiresAt != nil && sharedNote.ExpiresAt.Before(time.Now()) {
-		c.HTML(http.StatusGone, "shared_expired.html", gin.H{
-			"title": "Note Expired",
-		})
+		return nil, http.StatusGone
+	}
+
+	return &SharedNoteResponse{
+		ID:        sharedNote.ID.String(),
+		Title:     sharedNote.Note.Title,
+		Content:   sharedNote.Note.Content,
+		CreatedAt: sharedNote.CreatedAt,
+		ExpiresAt: sharedNote.ExpiresAt,
+	}, http.StatusOK
+}
+
+var sharedStatusNames = map[int]string{
+	http.StatusOK:                  "ok",
+	http.StatusNotFound:            "notfound",
+	http.StatusGone:                "expired",
+	http.StatusServiceUnavailable:  "disabled",
+	http.StatusInternalServerError: "error",
+}
+
+func getSharedNoteJSONHandler(c *gin.Context) {
+	note, status := lookupSharedNote(c.Param("shareId"))
+	c.Header("Cache-Control", "no-store")
+	if note == nil {
+		c.JSON(status, gin.H{"error": sharedStatusNames[status]})
+		return
+	}
+	c.JSON(http.StatusOK, note)
+}
+
+// sharedNotePageHandler serves the React app for /shared/:id with link-preview meta tags for that note,
+// and inlines the note so the page renders without a second request. Old share links keep working.
+func sharedNotePageHandler(c *gin.Context) {
+	shareID := c.Param("shareId")
+	note, status := lookupSharedNote(shareID)
+	meta := sharedNoteMeta(requestOrigin(c.Request), shareID, note, status)
+
+	shell, err := loadAppShell(c.Request)
+	if err != nil {
+		// Link previewers still get the note's meta tags; browsers hop to the SPA, which loads the note itself.
+		log.Printf("Shared page shell unavailable (%v), serving a redirecting meta page", err)
+		target := "/?shared=" + url.QueryEscape(shareID)
+		js, _ := json.Marshal(target)
+		page := fmt.Sprintf(`<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    %s
+    <script>location.replace(%s)</script>
+  </head>
+  <body><a href="%s">Open this note on blank.</a></body>
+</html>`, meta, js, html.EscapeString(target))
+		c.Header("Cache-Control", "no-store")
+		c.Data(status, "text/html; charset=utf-8", []byte(page))
 		return
 	}
 
-	proto := c.Request.Header.Get("X-Forwarded-Proto")
-	if proto == "" {
-		if c.Request.TLS != nil {
-			proto = "https"
-		} else {
-			proto = "http"
+	// json.Marshal escapes <, > and &, so the payload can't break out of the script tag.
+	payload, _ := json.Marshal(gin.H{"id": shareID, "status": sharedStatusNames[status], "note": note})
+	page := replaceBetween(shell, "<!-- meta:start", "<!-- meta:end -->", meta)
+	page = strings.Replace(page, "</head>", `<script id="shared-data" type="application/json">`+string(payload)+"</script>\n  </head>", 1)
+
+	c.Header("Cache-Control", "no-store")
+	c.Data(status, "text/html; charset=utf-8", []byte(page))
+}
+
+// sharedNoteMeta builds the <head> tags link previewers read (Open Graph, Twitter, iMessage, Slack…).
+func sharedNoteMeta(origin, shareID string, note *SharedNoteResponse, status int) string {
+	pageURL := origin + "/shared/" + url.PathEscape(shareID)
+	image := origin + "/api/og/" + url.PathEscape(shareID) + ".png"
+	ogType := "article"
+	var title, desc, alt string
+	var extra []string
+
+	switch {
+	case note != nil:
+		heading, body := og.Present(note.Title, note.Content)
+		if heading == "" {
+			heading = "Untitled note"
+		}
+		title = truncateRunes(heading, 90)
+		desc = truncateRunes(og.Plain(body), 200)
+		if desc == "" {
+			desc = "A note shared on blank. — a quiet place for your thoughts."
+		}
+		alt = fmt.Sprintf("“%s” — a note shared on blank.", truncateRunes(heading, 120))
+		extra = append(extra, `<meta property="article:published_time" content="`+note.CreatedAt.UTC().Format(time.RFC3339)+`" />`)
+		if note.ExpiresAt != nil {
+			extra = append(extra, `<meta property="article:expiration_time" content="`+note.ExpiresAt.UTC().Format(time.RFC3339)+`" />`)
+		}
+	case status == http.StatusGone:
+		title = "This note has faded"
+		desc = "It was shared on blank. with an expiry, and that time has passed. Write your own — it saves itself."
+		alt = "This note has faded — blank."
+	case status == http.StatusNotFound:
+		title = "This note isn’t here"
+		desc = "The link may be incomplete, or the note was removed. Write your own on blank. — it saves itself."
+		alt = "This note isn’t here — blank."
+	default:
+		title = "A shared note"
+		desc = "blank. — a quiet place for your thoughts. Local-first notes with share links that can expire."
+		image = origin + "/api/og/site.png"
+		alt = "blank. — a quiet place for your thoughts"
+		ogType = "website"
+	}
+
+	e := html.EscapeString
+	tags := []string{
+		`<title>` + e(title) + ` — blank.</title>`,
+		`<meta name="description" content="` + e(desc) + `" />`,
+		`<meta name="robots" content="noindex" />`,
+		`<link rel="canonical" href="` + e(pageURL) + `" />`,
+		`<meta property="og:site_name" content="blank." />`,
+		`<meta property="og:locale" content="en_US" />`,
+		`<meta property="og:type" content="` + ogType + `" />`,
+		`<meta property="og:url" content="` + e(pageURL) + `" />`,
+		`<meta property="og:title" content="` + e(title) + `" />`,
+		`<meta property="og:description" content="` + e(desc) + `" />`,
+		`<meta property="og:image" content="` + e(image) + `" />`,
+		`<meta property="og:image:type" content="image/png" />`,
+		fmt.Sprintf(`<meta property="og:image:width" content="%d" />`, og.Width),
+		fmt.Sprintf(`<meta property="og:image:height" content="%d" />`, og.Height),
+		`<meta property="og:image:alt" content="` + e(alt) + `" />`,
+		`<meta name="twitter:card" content="summary_large_image" />`,
+		`<meta name="twitter:title" content="` + e(title) + `" />`,
+		`<meta name="twitter:description" content="` + e(desc) + `" />`,
+		`<meta name="twitter:image" content="` + e(image) + `" />`,
+		`<meta name="twitter:image:alt" content="` + e(alt) + `" />`,
+	}
+	return strings.Join(append(tags, extra...), "\n    ")
+}
+
+var (
+	siteCardOnce sync.Once
+	siteCard     []byte
+	siteCardErr  error
+)
+
+// ogImageHandler renders link-preview cards. Shares can't be edited, so a card only changes when its
+// note expires; the CDN keeps it until then (at most a week).
+func ogImageHandler(c *gin.Context) {
+	name := c.Param("name")
+	id, ok := strings.CutSuffix(name, ".png")
+	if !ok {
+		c.Status(http.StatusNotFound)
+		return
+	}
+
+	var (
+		img   []byte
+		err   error
+		cache = "public, max-age=86400, s-maxage=604800"
+	)
+	if id == "site" {
+		siteCardOnce.Do(func() { siteCard, siteCardErr = og.Site() })
+		img, err = siteCard, siteCardErr
+	} else {
+		note, status := lookupSharedNote(id)
+		switch {
+		case note != nil:
+			ttl := 7 * 24 * time.Hour
+			if note.ExpiresAt != nil {
+				ttl = min(ttl, time.Until(*note.ExpiresAt))
+			}
+			secs := max(1, int(ttl.Seconds()))
+			cache = fmt.Sprintf("public, max-age=%d, s-maxage=%d", min(secs, 3600), secs)
+			img, err = og.SharedNote(og.Note{Title: note.Title, Content: note.Content, CreatedAt: note.CreatedAt, ExpiresAt: note.ExpiresAt})
+		case status == http.StatusGone || status == http.StatusNotFound:
+			cache = "public, max-age=300, s-maxage=3600"
+			img, err = og.Unavailable(status == http.StatusGone)
+		default:
+			// sharing disabled or the database hiccuped: show the site card, briefly
+			cache = "public, max-age=60, s-maxage=60"
+			siteCardOnce.Do(func() { siteCard, siteCardErr = og.Site() })
+			img, err = siteCard, siteCardErr
 		}
 	}
-	host := c.Request.Host
-	pageURL := fmt.Sprintf("%s://%s/shared/%s", proto, host, shareUUID.String())
-	imgURL := fmt.Sprintf("%s://%s/static/og.jpg", proto, host)
-	desc := strings.TrimSpace(sharedNote.Note.Content)
-	if desc == "" {
-		desc = "A shared note from blank.achraf.tn"
-	}
-	if len(desc) > 180 {
-		desc = desc[:180] + "..."
-	}
-
-	c.HTML(http.StatusOK, "shared_note.html", gin.H{
-		"title":       sharedNote.Note.Title,
-		"content":     sharedNote.Note.Content,
-		"date":        sharedNote.Note.CreatedAt.Format("January 2, 2006"),
-		"url":         pageURL,
-		"image":       imgURL,
-		"description": desc,
-	})
-}
-
-func downloadNoteHandler(c *gin.Context) {
-	if db == nil {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Downloads disabled"})
-		return
-	}
-
-	noteID := c.Param("id")
-	format := c.Param("format")
-
-	noteUUID, err := uuid.Parse(noteID)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid note ID"})
+		log.Printf("Error rendering og image %s: %v", name, err)
+		c.Status(http.StatusInternalServerError)
 		return
 	}
-
-	var note Note
-	if err := db.Where("id = ?", noteUUID).First(&note).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Note not found"})
-		return
-	}
-
-	filename := note.GetTitle()
-	if filename == "Untitled" {
-		filename = "note"
-	}
-
-	// Sanitize filename
-	filename = strings.ReplaceAll(filename, "/", "-")
-	filename = strings.ReplaceAll(filename, "\\", "-")
-	filename = strings.ReplaceAll(filename, ":", "-")
-
-	switch format {
-	case "txt":
-		c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s.txt\"", filename))
-		c.Header("Content-Type", "text/plain")
-		c.String(http.StatusOK, note.Content)
-	case "md":
-		c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s.md\"", filename))
-		c.Header("Content-Type", "text/markdown")
-		c.String(http.StatusOK, note.Content)
-	default:
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid format"})
-	}
+	c.Header("Cache-Control", cache)
+	c.Data(http.StatusOK, "image/png", img)
 }
 
-func searchNotesHandler(c *gin.Context) {
-	if db == nil {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Search disabled"})
-		return
+func replaceBetween(s, start, end, with string) string {
+	i := strings.Index(s, start)
+	j := strings.Index(s, end)
+	if i < 0 || j < i {
+		return s
 	}
-
-	query := c.Query("q")
-	if query == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Query parameter required"})
-		return
-	}
-
-	var notes []Note
-	searchTerm := "%" + query + "%"
-	if err := db.Where("title ILIKE ? OR content ILIKE ?", searchTerm, searchTerm).
-		Order("updated_at DESC").Find(&notes).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Search failed"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"notes": notes})
+	return s[:i] + with + s[j+len(end):]
 }
 
-func statsHandler(c *gin.Context) {
-	if db == nil {
-		c.JSON(http.StatusOK, gin.H{"totalNotes": 0, "totalWords": 0, "sharingEnabled": false})
-		return
+func truncateRunes(s string, n int) string {
+	if utf8.RuneCountInString(s) <= n {
+		return s
 	}
-	var totalNotes int64
-	var totalWords int64
+	return string([]rune(s)[:n]) + "…"
+}
 
-	db.Model(&Note{}).Count(&totalNotes)
+func requestOrigin(r *http.Request) string {
+	proto := r.Header.Get("X-Forwarded-Proto")
+	if proto == "" {
+		proto = "http"
+		if r.TLS != nil {
+			proto = "https"
+		}
+	}
+	return proto + "://" + r.Host
+}
 
-	var notes []Note
-	db.Find(&notes)
+var (
+	shellMu     sync.Mutex
+	shellCache  = map[string]cachedShell{}
+	shellClient = &http.Client{Timeout: 5 * time.Second}
+)
 
-	for _, note := range notes {
-		totalWords += int64(note.WordCount())
+type cachedShell struct {
+	html string
+	at   time.Time
+}
+
+// loadAppShell returns the built web/dist/index.html. Locally it's read from disk; on Vercel the static
+// build isn't part of the function bundle, so it's fetched from this deployment's own domain — only for
+// hosts Vercel reports as ours, so a spoofed Host header can't make us fetch (or cache) someone else's page.
+func loadAppShell(r *http.Request) (string, error) {
+	if b, err := os.ReadFile(filepath.Join("web", "dist", "index.html")); err == nil {
+		return string(b), nil
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"totalNotes": totalNotes,
-		"totalWords": totalWords,
-	})
+	host := strings.ToLower(r.Host)
+	allowed := false
+	for _, k := range []string{"VERCEL_PROJECT_PRODUCTION_URL", "VERCEL_BRANCH_URL", "VERCEL_URL"} {
+		if v := strings.ToLower(os.Getenv(k)); v != "" && v == host {
+			allowed = true
+		}
+	}
+	if !allowed {
+		return "", fmt.Errorf("host %q is not a known deployment host", r.Host)
+	}
+
+	shellMu.Lock()
+	defer shellMu.Unlock()
+	if s, ok := shellCache[host]; ok && time.Since(s.at) < 10*time.Minute {
+		return s.html, nil
+	}
+
+	req, err := http.NewRequestWithContext(r.Context(), http.MethodGet, "https://"+host+"/index.html", nil)
+	if err != nil {
+		return "", err
+	}
+	resp, err := shellClient.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("fetching app shell: status %d", resp.StatusCode)
+	}
+	b, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	if err != nil {
+		return "", err
+	}
+	page := string(b)
+	if !strings.Contains(page, "<!-- meta:start") {
+		return "", errors.New("app shell is missing the meta:start marker")
+	}
+	shellCache[host] = cachedShell{html: page, at: time.Now()}
+	return page, nil
 }

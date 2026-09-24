@@ -1,0 +1,6 @@
+.env
+.env.*
+.omo
+.playwright-mcp
+web/node_modules
+web/dist

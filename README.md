@@ -1,6 +1,6 @@
 # blank.achraf.tn - Minimalist Note Taking App
 
-A modern, elegant note-taking application with a local-first approach. Built with Go (Gin) backend and vanilla JavaScript frontend. Features instant local storage for notes with optional cloud sharing via PostgreSQL.
+A modern, elegant note-taking application with a local-first approach. Built with a React 19 frontend (Vite, Tailwind v4, React Compiler) and a Go (Gin) API, both deployed on Vercel. Features instant local storage for notes with optional cloud sharing via PostgreSQL.
 
 ## Screenshot
 
@@ -21,17 +21,14 @@ A modern, elegant note-taking application with a local-first approach. Built wit
 
 ## Tech Stack
 
-- **Frontend**: Vanilla JavaScript with localStorage for instant note management
-- **Backend**: Go with Gin web framework (only for sharing functionality)
-- **Local Storage**: Browser localStorage for primary note storage
+- **Frontend** (`web/`): React 19 + React Compiler, Vite, Tailwind CSS v4, TypeScript. Notes in localStorage, images in IndexedDB.
+- **Backend** (`api/app.go`): Go with Gin, deployed as a Vercel serverless function (sharing only).
 - **Cloud Storage**: PostgreSQL (only for shared notes)
-- **Styling**: Tailwind CSS with Cousine font
-- **Templates**: Go HTML templates for sharing pages
-- **HTTP Requests**: Native Fetch API for sharing functionality
 
 ## Prerequisites
 
-- Go 1.18 or higher
+- Go 1.23 or higher
+- Node.js 22.12 or higher
 - PostgreSQL 12 or higher (only needed for sharing functionality)
 
 ## Setup
@@ -61,11 +58,10 @@ A modern, elegant note-taking application with a local-first approach. Built wit
 
 4. **Run the application**
    ```bash
-   go run .
+   cd web && npm ci && npm run build && cd ..
+   go run .                 # http://localhost:8080 (app + API)
    ```
-
-5. **Access the application**
-   Open your browser and navigate to `http://localhost:8080`
+   For frontend work with hot reload, run `go run .` in one terminal and `cd web && npm run dev` in another (http://localhost:5173, proxies `/api` to Go).
 
 **Note**: The app works perfectly without PostgreSQL - you'll just be unable to share notes publicly. All note-taking functionality works with localStorage only.
 
@@ -100,7 +96,9 @@ The app uses browser localStorage with the key `blankpage_notes` to store all yo
 
 ### Sharing API (Optional - requires PostgreSQL)
 - `POST /api/share` - Create a shareable link from local note
-- `GET /shared/:shareId` - View shared note in browser
+- `GET /api/shared/:shareId` - Shared note as JSON
+- `GET /shared/:shareId` - View shared note in browser (with per-note Open Graph / Twitter meta)
+- `GET /api/og/:shareId.png` - Dynamic 1200×630 link-preview image for a shared note (`/api/og/site.png` for the site card)
 
 **Note**: All note CRUD operations happen locally in the browser. The backend is only used for sharing functionality.
 
@@ -134,7 +132,7 @@ CREATE TABLE shared_notes (
 ### Creating Notes
 1. Start typing immediately in the main editor area
 2. Notes are saved instantly to localStorage as you type
-3. Click "New Note" or use Ctrl+N to create additional notes
+3. Click "+" or press ⌃⌥N / Ctrl+Alt+N to create additional notes
 4. The first line automatically becomes the note title
 
 ### Organizing Notes
@@ -146,9 +144,8 @@ CREATE TABLE shared_notes (
 ### Sharing Notes (Optional)
 1. Write your note in the editor
 2. Click the "Share" button in the top navigation
-3. Choose an expiration time (1 hour, 24 hours, 7 days, 30 days, or never)
-4. Click "Create Share Link" to generate a public URL
-5. Copy and share the link with others
+3. Choose an expiration (1 hour, 1 day, 1 week, 1 month, a custom date, or never)
+4. Click "Create link" — it's copied to your clipboard
 
 ### Local Storage Benefits
 - **Instant saving**: No network delays or loading spinners
@@ -157,49 +154,33 @@ CREATE TABLE shared_notes (
 - **Performance**: Lightning-fast switching between notes
 
 ### Keyboard Shortcuts
-- `Ctrl+N` (or `Cmd+N`): Create new note
-- `Ctrl+D` (or `Cmd+D`): Toggle dark mode
-- `Ctrl+S` (or `Cmd+S`): Manual save (auto-save is always active)
-- `Escape`: Close open menus
+App shortcuts use `⌃⌥` (Control+Option) on macOS and `Ctrl+Alt` elsewhere, so they never type accent characters.
+- `⌘K` / `Ctrl+K`: Command bar (every action: share, copy, export, import, backup, print, theme…)
+- `⌃⌥N`: New note
+- `⌃⌥B`: Toggle sidebar (or click the sidebar's edge)
+- `⌃⌥F`: Focus mode (`Esc` to exit)
+- `⌃⌥S`: Share the current note
+- `⌃⌥T`: Toggle light/dark theme
+- `/`: Search notes
 
-### Themes
-- Click the "🌓 Theme" button to toggle between light and dark mode
-- Theme preference is saved in browser localStorage
-- Respects system dark mode preference by default
-
-### Sound Effects
-- Click the "🔊 Sound" button to toggle typewriter sounds
-- Sound preference is saved in browser localStorage
+### Images
+Paste or drop images anywhere to attach them to the current note. They're stored in this browser (IndexedDB) and aren't included in share links.
 
 ## Development
 
 ### Project Structure
 ```
 blankpage_app/
-├── api/
-│   ├── app.go              # All application logic (handlers, models, routing)
-│   ├── templates/          # HTML templates (embedded)
-│   │   ├── index.html
-│   │   ├── sidebar.html
-│   │   └── ...
-│   └── static/             # Static assets (embedded)
-│       ├── css/style.css
-│       └── js/app.js
-├── main.go                 # Local development entry point
-├── go.mod                  # Go module definition
-├── vercel.json             # Vercel deployment config
-└── README.md
+├── api/app.go              # All Go logic (sharing API, shared-note link previews) — Vercel function
+├── web/                    # React app → web/dist (served statically by Vercel)
+│   ├── index.html
+│   ├── public/static/      # favicon, og.jpg
+│   └── src/
+├── og/                     # Link-preview (Open Graph) image renderer, fonts embedded
+├── main.go                 # Local development entry point (serves web/dist + API)
+├── go.mod
+└── vercel.json             # Builds web/, routes /api, /shared, /health to Go
 ```
-
-**Note**: All business logic is in `/api/app.go`. The root `main.go` is a thin wrapper for local development that imports from the `api` package. This structure eliminates code duplication while supporting both local development and Vercel deployment.
-
-### Adding Features
-1. Add new routes in `/api/app.go` (in `setupRoutes` function)
-2. Implement handlers in `/api/app.go`
-3. Update models in `/api/app.go`
-4. Create templates in `/api/templates/`
-5. Add styles to `/api/static/css/style.css`
-6. Add JavaScript to `/api/static/js/app.js`
 
 ### Database Migrations
 The application uses GORM's auto-migration feature. To add new fields:
@@ -209,23 +190,11 @@ The application uses GORM's auto-migration feature. To add new fields:
 
 ## Deployment
 
-### Docker (Recommended)
-Create a `Dockerfile`:
-```dockerfile
-FROM golang:1.21-alpine AS builder
-WORKDIR /app
-COPY go.mod go.sum ./
-RUN go mod download
-COPY . .
-RUN go build -o main .
+### Vercel
+`vercel.json` builds `web/` (`npm ci && npm run build`) and deploys `api/app.go` as a Go function. Set `DATABASE_URL` in the project settings to enable sharing.
 
-FROM alpine:latest
-RUN apk --no-cache add ca-certificates
-WORKDIR /root/
-COPY --from=builder /app/main .
-# Templates and static files are embedded in the binary
-CMD ["./main"]
-```
+### Docker
+`docker build -t blank . && docker run -p 8080:8080 -e DATABASE_URL=... blank` — the image builds the frontend and the Go server.
 
 ### Environment Variables for Production
 ```bash

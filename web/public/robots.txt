@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Allow: /api/og/
+Disallow: /api/
+
+Sitemap: https://blank.achraf.tn/sitemap.xml

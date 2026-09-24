@@ -1,52 +1,48 @@
 # AGENTS.md - Coding Guidelines for Blank Page App
 
 ## Project Overview
-A minimalist note-taking app with Go (Gin) backend deployed on Vercel as serverless functions. Uses localStorage for notes with optional PostgreSQL sharing.
+A minimalist note-taking app: a React 19 SPA (`web/`, Vite + Tailwind v4 + React Compiler) served as static files, plus a Go (Gin) API deployed on Vercel as a serverless function. Notes live in the browser (localStorage, images in IndexedDB); PostgreSQL is only used for share links.
 
 ## Project Structure
 
 ```
 blankpage_app/
 ├── api/
-│   ├── app.go              # Vercel serverless entry point (ALL logic here)
-│   ├── templates/          # HTML templates (embedded)
-│   └── static/             # Static assets (embedded)
-├── main.go                 # Local development entry (imports from api/)
-├── go.mod                  # Go module: blankpage_app
-├── go.sum                  # Dependencies
-├── vercel.json             # Vercel routing config
-├── .env.example            # Environment template
+│   └── app.go              # Vercel serverless function (ALL Go logic here)
+├── web/                    # React app (built to web/dist, served statically by Vercel)
+│   ├── index.html          # Keep the <!-- meta:start/end --> markers: api/app.go swaps them for shared notes
+│   ├── public/static/      # favicon, og.jpg (served at /static/...)
+│   └── src/
+│       ├── lib/storage.ts      # localStorage format (shared with the previous app — do not change keys/shape)
+│       ├── lib/attachments.ts  # IndexedDB "blankpage-attachments" (shared with the previous app)
+│       └── lib/api.ts          # client for /api/share and /api/shared/:id
+├── og/                     # Link-preview image renderer (imported by api/app.go; fonts embedded)
+│   ├── og.go / text.go     # 1200×630 PNG cards: site, shared note, faded/missing
+│   └── fonts/              # Instrument Serif, Geist, Geist Mono (OFL)
+├── main.go                 # Local dev: serves web/dist + routes /api, /shared, /health to api/
+├── go.mod / go.sum         # Go module: blankpage_app
+├── vercel.json             # Build web/, route API paths to /api/app, SPA fallback
 └── init.sql                # Database schema
 ```
 
-**CRITICAL**: Vercel ONLY deploys the `/api` folder. The root `main.go` is for local development only and imports from the `api` package.
+**CRITICAL**: Vercel builds `web/` into `web/dist` (static) and `api/app.go` (function). The root `main.go` is for local development only.
+
+**Storage compatibility**: notes are stored under `blankpage_notes` as `{ [id]: { id, title, content, createdAt, updatedAt, pinned? } }` where `content` is the source of truth (first line = title). Also `blankpage_last_note`, `theme`, and the `?note=<id>` URL param. Existing users depend on this — keep it backward compatible.
 
 ## Build Commands
 
 ```bash
-# Install dependencies
-go mod tidy
+# Frontend
+cd web && npm ci
+npm run dev                  # Vite on :5173, proxies /api to the Go server on :8080
+npm run build                # tsc + vite build -> web/dist
 
-# Build for local development
-go build -o main .
-
-# Run locally (uses main.go which imports from api/)
-go run .
-
-# Test Vercel build (compiles api/ folder only)
-cd api && go build -o /tmp/api_test .
-
-# Test a single function
-go test -v ./api/... -run TestFunctionName
-
-# Test all
+# Backend (from repo root)
+go run .                     # API on :8080; also serves web/dist if built
+go build ./... && go vet ./...
+cd api && go build -o /tmp/api_test .   # Vercel-style build of the function only
 go test ./...
-
-# Format code
 go fmt ./...
-
-# Vet code
-go vet ./...
 ```
 
 ## Vercel Deployment
@@ -140,14 +136,14 @@ func InitApp() {
 - Gracefully degrade when DATABASE_URL not set
 - Use GORM's `AutoMigrate` for schema changes
 
-### Embedded Files
-```go
-//go:embed templates/* static/*
-var embeddedFS embed.FS
+### Frontend
+- Static assets go in `web/public/`. `web/public/static/og.png` is the homepage card rendered by `og.Site()` — regenerate it after changing the card design: `OG_OUT=/tmp/og go test -run TestCards ./og && cp /tmp/og/site.png web/public/static/og.png`.
 
-// Parse templates once at startup
-tmpl, _ := template.ParseFS(embeddedFS, "templates/*.html")
-```
+### Link previews
+- `/shared/:id` injects per-note meta (title, excerpt, `og:image` + size/alt, `article:*` times, Twitter card, `noindex`) between the `index.html` markers; if the app shell can't be loaded it serves a meta-only page that redirects browsers to `/?shared=<id>`.
+- `/api/og/<id>.png` and `/api/og/site.png` render cards with `og/`. Shares are immutable, so cards are CDN-cached until the note expires (max 7 days).
+- Helper packages for the Vercel function live outside `api/` (every `.go` file in `api/` becomes its own function).
+- The React Compiler is on (Babel preset): no manual `useMemo`/`useCallback` needed for new code, and avoid `eslint-disable` comments, reading refs during render, or `throw` inside `try` in components — the compiler skips those components.
 
 ## Environment Variables
 
@@ -170,25 +166,18 @@ go test -cover ./...
 
 1. **Don't modify main.go and forget `api/app.go`** - api/ is the source of truth
 2. **Don't use `package main` in `/api` folder** - Must be `package handler`
-3. **Don't forget embed directives** when adding new static files
+3. **Keep `web/index.html` meta markers** — `/shared/:id` injects per-note link-preview tags there
 4. **Always check `db != nil`** before database operations
 5. **Use `sync.Once`** for Vercel initialization to avoid re-initializing on each request
 6. **Export functions from api/** that local dev needs (InitApp, GetRouter)
 
 ## Vercel Routing
 
-All routes go through `/api/app` per `vercel.json`:
-```json
-{
-  "routes": [
-    { "src": "/(.*)", "dest": "/api/app" }
-  ]
-}
-```
+`vercel.json` sends `/api/*`, `/shared/*` and `/health` to the Go function (`/api/app`); everything else is served from `web/dist`, falling back to `index.html` for client-side routes. `main.go` mirrors the same split locally.
 
 ## Single Source of Truth
 
-All business logic lives in `/api/app.go`. Root `main.go` is just a thin wrapper:
+All HTTP handling lives in `/api/app.go` (image rendering is in `og/`). Root `main.go` is just a thin wrapper:
 
 ```go
 // main.go - Local development entry point
