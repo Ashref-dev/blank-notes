@@ -396,10 +396,9 @@ func sharedNoteMeta(origin, shareID string, note *SharedNoteResponse, status int
 			heading = "Untitled note"
 		}
 		title = truncateRunes(heading, 90)
-		desc = truncateRunes(og.Plain(body), 200)
-		if desc == "" {
-			desc = "A note shared on blank. — a quiet place for your thoughts."
-		}
+		// Only the title is public in previews; the body stays behind the link.
+		count, read := og.Stats(og.WordCount(heading + " " + body))
+		desc = "A note shared on blank. · " + count + " · " + read + "."
 		alt = fmt.Sprintf("“%s” — a note shared on blank.", truncateRunes(heading, 120))
 		extra = append(extra, `<meta property="article:published_time" content="`+note.CreatedAt.UTC().Format(time.RFC3339)+`" />`)
 		if note.ExpiresAt != nil {

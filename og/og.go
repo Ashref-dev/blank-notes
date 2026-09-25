@@ -10,7 +10,6 @@ import (
 	"regexp"
 	"strings"
 	"time"
-	"unicode/utf8"
 
 	"github.com/go-text/typesetting/font"
 	"github.com/srwiley/rasterx"
@@ -19,13 +18,11 @@ import (
 const (
 	Width  = 1200
 	Height = 630
-	pad    = 80
 )
 
 // Palette of the light theme (web/src/index.css).
 var (
 	bg     = color.RGBA{0xf6, 0xf4, 0xef, 0xff}
-	elev   = color.RGBA{0xfb, 0xfa, 0xf7, 0xff}
 	ink    = color.RGBA{0x1a, 0x19, 0x17, 0xff}
 	muted  = color.RGBA{0x6d, 0x69, 0x60, 0xff}
 	faint  = color.RGBA{0xa3, 0x9e, 0x94, 0xff}
@@ -60,32 +57,15 @@ func Present(title, content string) (heading, body string) {
 	}
 }
 
-// Plain flattens markdown-ish note text into a single line for descriptions and excerpts.
-func Plain(s string) string {
-	var b strings.Builder
-	for _, l := range strings.Split(s, "\n") {
-		l = strings.Join(strings.Fields(listMarker.ReplaceAllString(l, "")), " ")
-		if l == "" {
-			continue
-		}
-		if b.Len() > 0 {
-			// separate list items and bare lines so they don't run together
-			if strings.ContainsRune(".!?:;,…", lastRune(b.String())) {
-				b.WriteString(" ")
-			} else {
-				b.WriteString(" · ")
-			}
-		}
-		b.WriteString(l)
-	}
-	return b.String()
-}
-
 func WordCount(s string) int { return len(strings.Fields(s)) }
 
-func lastRune(s string) rune {
-	r, _ := utf8.DecodeLastRuneInString(s)
-	return r
+// Stats summarises a note's length without revealing any of it: "9 words · 1 min read".
+func Stats(words int) (count, read string) {
+	unit := "words"
+	if words == 1 {
+		unit = "word"
+	}
+	return fmt.Sprintf("%d %s", words, unit), fmt.Sprintf("%d min read", max(1, (words+199)/200))
 }
 
 type canvas struct {
@@ -110,20 +90,14 @@ func (c *canvas) face(f *font.Font) *font.Face { return font.NewFace(f) }
 
 // glow blends a soft radial wash of col into the background, like the blurred accent orb in the app.
 func (c *canvas) glow(cx, cy, radius, strength float64, col color.RGBA) {
-	x0, x1 := max(0, int(cx-radius*2)), min(Width, int(cx+radius*2))
-	y0, y1 := max(0, int(cy-radius*2)), min(Height, int(cy+radius*2))
+	x0, x1 := max(0, int(cx-radius*3.5)), min(Width, int(cx+radius*3.5))
+	y0, y1 := max(0, int(cy-radius*3.5)), min(Height, int(cy+radius*3.5))
 	for y := y0; y < y1; y++ {
 		for x := x0; x < x1; x++ {
 			dx, dy := float64(x)-cx, float64(y)-cy
-			a := strength * math.Exp(-(dx*dx+dy*dy)/(2*radius*radius))
-			if a < 0.002 {
-				continue
+			if a := strength * math.Exp(-(dx*dx+dy*dy)/(2*radius*radius)); a >= 0.002 {
+				c.blend(x, y, col, a)
 			}
-			i := c.img.PixOffset(x, y)
-			p := c.img.Pix[i : i+3 : i+3]
-			p[0] = uint8(float64(p[0])*(1-a) + float64(col.R)*a + 0.5)
-			p[1] = uint8(float64(p[1])*(1-a) + float64(col.G)*a + 0.5)
-			p[2] = uint8(float64(p[2])*(1-a) + float64(col.B)*a + 0.5)
 		}
 	}
 }
@@ -136,29 +110,27 @@ func (c *canvas) fill(col color.Color, shape func(rasterx.Adder)) {
 	f.Draw()
 }
 
-func (c *canvas) roundRect(x0, y0, x1, y1, r float64, col color.Color) {
-	c.fill(col, func(a rasterx.Adder) { rasterx.AddRoundRect(x0, y0, x1, y1, r, r, 0, rasterx.RoundGap, a) })
-}
-
 func (c *canvas) rect(x0, y0, x1, y1 float64, col color.Color) {
 	c.fill(col, func(a rasterx.Adder) { rasterx.AddRect(x0, y0, x1, y1, 0, a) })
 }
 
-func (c *canvas) circle(cx, cy, r float64, col color.Color) {
-	c.fill(col, func(a rasterx.Adder) { rasterx.AddCircle(cx, cy, r, a) })
+// caret draws the editor's accent text cursor after x and returns where it ends.
+func (c *canvas) caret(x, baseline, size float32) float32 {
+	h := float64(size) * 0.72
+	w := math.Max(3, float64(size)*0.028)
+	x0 := float64(x) + float64(size)*0.08
+	c.rect(x0, float64(baseline)-h+float64(size)*0.02, x0+w, float64(baseline)+float64(size)*0.02, accent)
+	return float32(x0 + w)
 }
 
-// wordmark draws "blank." with the accent dot; with caret it adds the app's blinking cursor bar.
+// wordmark draws "blank." with the accent dot; with caret it adds the app's cursor bar.
 func (c *canvas) wordmark(x, baseline, size float32, caret bool) float32 {
 	s := style{face: c.face(c.f.serif), size: size, color: ink, tracking: -0.03}
 	x = c.ts.draw(c.img, s, "blank", x, baseline)
 	s.color = accent
 	x = c.ts.draw(c.img, s, ".", x, baseline)
 	if caret {
-		h := float64(size) * 0.72
-		x0 := float64(x) + float64(size)*0.04
-		c.rect(x0, float64(baseline)-h+float64(size)*0.02, x0+math.Max(3, float64(size)*0.028), float64(baseline)+float64(size)*0.02, accent)
-		x = float32(x0) + float32(math.Max(3, float64(size)*0.028))
+		x = c.caret(x-size*0.04, baseline, size)
 	}
 	return x
 }
@@ -172,32 +144,23 @@ func (c *canvas) wordmarkWidth(size float32, caret bool) float32 {
 	return w
 }
 
-// pill draws a rounded label right-aligned at xRight, vertically centred on cy.
-func (c *canvas) pill(xRight, cy float32, text string, tinted bool) {
-	s := style{face: c.face(c.f.sans), size: 21, color: muted}
-	fillCol, border, dot := color.Color(elev), color.Color(line), color.Color(faint)
-	if tinted {
-		s.color = accent
-		fillCol = color.RGBA{0xe9, 0xee, 0xfa, 0xff}
-		border = color.RGBA{0xc4, 0xd3, 0xf8, 0xff}
-		dot = accent
-	}
-	tw := c.ts.width(s, text)
-	h, padX, dotR, gap := float32(48), float32(22), float32(4.5), float32(12)
-	w := padX + dotR*2 + gap + tw + padX
-	x0, y0 := xRight-w, cy-h/2
-	c.roundRect(float64(x0), float64(y0), float64(xRight), float64(y0+h), float64(h/2), border)
-	c.roundRect(float64(x0+1.5), float64(y0+1.5), float64(xRight-1.5), float64(y0+h-1.5), float64(h/2-1.5), fillCol)
-	c.circle(float64(x0+padX+dotR), float64(cy), float64(dotR), dot)
-	c.ts.draw(c.img, s, text, x0+padX+dotR*2+gap, cy+7.5)
+// span is one run of differently styled text on a line.
+type span struct {
+	s    style
+	text string
 }
 
-func (c *canvas) footer(left, right string) {
-	c.rect(pad, Height-pad-58, Width-pad, Height-pad-56.5, line)
-	s := style{face: c.face(c.f.mono), size: 20, color: faint, tracking: 0.02}
-	c.ts.draw(c.img, s, left, pad, Height-pad)
-	if right != "" {
-		c.ts.draw(c.img, s, right, Width-pad-c.ts.width(s, right), Height-pad)
+func (c *canvas) spansWidth(spans []span) float32 {
+	var w float32
+	for _, sp := range spans {
+		w += c.ts.width(sp.s, sp.text)
+	}
+	return w
+}
+
+func (c *canvas) drawSpans(spans []span, x, baseline float32) {
+	for _, sp := range spans {
+		x = c.ts.draw(c.img, sp.s, sp.text, x, baseline)
 	}
 }
 
@@ -210,121 +173,144 @@ func (c *canvas) png() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// Site renders the default card for blank.achraf.tn.
+func deg(d float64) float64 { return d * math.Pi / 180 }
+
+// Site renders the default card for blank.achraf.tn: a small stack of paper on a dotted desk, the
+// wordmark with its cursor, and "thoughts" selected the way the editor highlights text.
 func Site() ([]byte, error) {
 	c, err := newCanvas()
 	if err != nil {
 		return nil, err
 	}
-	c.glow(Width/2, Height*0.42, 230, 0.11, accent)
+	c.dots(24)
+	c.glow(Width*0.8, Height*0.14, 250, 0.2, accent)
+	c.glow(Width*0.12, Height*0.98, 190, 0.08, accent)
 
-	const size = 216
-	x := (Width - c.wordmarkWidth(size, true)) / 2
-	c.wordmark(x, 330, size, true)
+	const cx, cy, w, h = Width / 2, 292.0, 880.0, 400.0
+	c.sheet(cx-10, cy+10, w, h, deg(-3.4), sheetBack)
+	c.sheet(cx+8, cy+4, w, h, deg(2.2), sheetBack)
+	c.sheet(cx, cy, w, h, 0, sheetFill)
+
+	const size = 184
+	c.wordmark((Width-c.wordmarkWidth(size, true))/2, 312, size, true)
 
 	a := style{face: c.face(c.f.sans), size: 34, color: muted}
 	b := style{face: c.face(c.f.sans), size: 34, color: ink}
-	t1, t2 := "A quiet place for your thoughts. ", "Just start typing."
-	w := c.ts.width(a, t1) + c.ts.width(b, t2)
-	x = (Width - w) / 2
-	x = c.ts.draw(c.img, a, t1, x, 430)
-	c.ts.draw(c.img, b, t2, x, 430)
+	pre, word := span{a, "A quiet place for your "}, span{b, "thoughts"}
+	line := []span{pre, word, {a, "."}}
+	x, y := (Width-c.spansWidth(line))/2, float32(400)
+	sx, sw := float64(x+c.ts.width(a, pre.text)), float64(c.ts.width(b, word.text))
+	c.fill(selection, func(ad rasterx.Adder) {
+		roundRectPath(ad, sx+sw/2, float64(y)-34*0.34, sw+10, 34*1.32, 5, 0)
+	})
+	c.drawSpans(line, x, y)
 
-	m := style{face: c.face(c.f.mono), size: 21, color: faint, tracking: 0.08}
+	m := style{face: c.face(c.f.mono), size: 19, color: faint, tracking: 0.14}
 	label := "BLANK.ACHRAF.TN"
-	c.ts.draw(c.img, m, label, (Width-c.ts.width(m, label))/2, Height-72)
+	c.ts.draw(c.img, m, label, (Width-c.ts.width(m, label))/2, 588)
 	return c.png()
 }
 
-// SharedNote renders the card for a live shared note.
-func SharedNote(n Note) ([]byte, error) {
+// Layout of the single-sheet cards (shared note, unavailable).
+const (
+	noteCX, noteCY, noteW, noteH = Width / 2, 314.0, 1056.0, 492.0
+	noteLeft                     = noteCX - noteW/2 + 64
+	noteTop                      = noteCY - noteH/2
+	noteMaxW                     = noteW - 128
+	noteRule                     = 444.0
+	noteFoot                     = 500.0
+)
+
+func noteSheet(glow float64) (*canvas, error) {
 	c, err := newCanvas()
 	if err != nil {
 		return nil, err
 	}
-	c.glow(Width-140, 60, 260, 0.12, accent)
-	c.glow(-40, Height+40, 220, 0.05, accent)
+	c.dots(24)
+	c.glow(Width-120, 40, 280, glow, accent)
+	c.glow(60, Height+20, 200, glow*0.35, accent)
+	c.sheet(noteCX+6, noteCY+6, noteW, noteH, deg(-1.4), sheetBack)
+	c.sheet(noteCX, noteCY, noteW, noteH, 0, sheetFill)
+	c.wordmark(noteLeft, noteTop+94, 46, false)
+	return c, nil
+}
 
-	c.wordmark(pad, pad+44, 56, false)
-	if n.ExpiresAt != nil {
-		c.pill(Width-pad, pad+28, "Fades "+n.ExpiresAt.UTC().Format("2 Jan 2006"), true)
-	} else {
-		c.pill(Width-pad, pad+28, "Shared note", false)
+// footer draws the rule, the site on the left and a large right-aligned line of spans.
+func (c *canvas) footer(right []span) {
+	c.rect(noteLeft, noteRule, noteLeft+noteMaxW, noteRule+1.5, line)
+	m := style{face: c.face(c.f.mono), size: 22, color: muted, tracking: 0.02}
+	c.ts.draw(c.img, m, "blank.achraf.tn", noteLeft, noteFoot)
+	c.drawSpans(right, noteLeft+noteMaxW-c.spansWidth(right), noteFoot)
+}
+
+// SharedNote renders the card for a live shared note. It shows the title only: the body stays private,
+// hinted at by blurred placeholder lines whose shapes don't depend on the text.
+func SharedNote(n Note) ([]byte, error) {
+	c, err := noteSheet(0.18)
+	if err != nil {
+		return nil, err
 	}
 
 	heading, body := Present(n.Title, n.Content)
-	words := WordCount(heading + " " + body)
-	heading, okH := renderable(c.f.serif, heading)
-	excerpt, okB := renderable(c.f.sans, Plain(body))
-	if !okH || heading == "" {
+	words, bodyWords := WordCount(heading+" "+body), WordCount(body)
+	heading, ok := renderable(c.f.serif, heading)
+	if !ok || heading == "" {
 		// Text in a script these fonts can't draw: lead with a neutral line rather than boxes.
 		heading = "A note, shared with you."
-		if !okB {
-			excerpt = ""
-		}
-	}
-	if !okB {
-		excerpt = ""
 	}
 
-	maxW := float32(Width - pad*2)
-	titleTop := float32(212)
-	big := style{face: c.face(c.f.serif), size: 92, color: ink, tracking: -0.015}
+	maxW := float32(noteMaxW) - 24 // room for the caret
+	big := style{face: c.face(c.f.serif), size: 94, color: ink, tracking: -0.015}
 	lines := c.ts.wrap(big, heading, maxW, 1)
 	if strings.HasSuffix(lines[0], "…") {
 		big.size = 76
-		maxLines := 2
-		if excerpt == "" {
-			maxLines = 3
-		}
-		lines = c.ts.wrap(big, heading, maxW, maxLines)
+		lines = c.ts.wrap(big, heading, maxW, 3)
 	}
-	lh := big.size * 1.04
-	y := titleTop + big.size*0.8
-	for _, l := range lines {
-		c.ts.draw(c.img, big, l, pad, y)
-		y += lh
-	}
-
-	if excerpt != "" {
-		s := style{face: c.face(c.f.sans), size: 29, color: muted}
-		maxLines := 3
-		if len(lines) > 1 {
-			maxLines = 2
+	y := float32(190) + big.size*0.8
+	for i, l := range lines {
+		if i > 0 {
+			y += big.size * 1.04
 		}
-		y += 26 - lh + s.size*1.55
-		for _, l := range c.ts.wrap(s, excerpt, maxW, maxLines) {
-			c.ts.draw(c.img, s, l, pad, y)
-			y += s.size * 1.55
+		end := c.ts.draw(c.img, big, l, noteLeft, y)
+		if i == len(lines)-1 {
+			c.caret(end, y, big.size)
 		}
 	}
 
-	unit := "words"
-	if words == 1 {
-		unit = "word"
+	if bodyWords > 0 {
+		first := float64(y) + 58
+		fit := int(math.Floor((noteRule-34-first)/40)) + 1
+		if rows := min(3, (bodyWords+11)/12, fit); rows > 0 {
+			c.ghostLines(noteLeft, first, noteMaxW, rows, 1)
+		}
 	}
-	right := fmt.Sprintf("%d %s · %d min read", words, unit, max(1, (words+199)/200))
-	c.footer("blank.achraf.tn", right)
+
+	count, read := Stats(words)
+	st := style{face: c.face(c.f.sansMedium), size: 30, color: ink}
+	sep := style{face: c.face(c.f.sans), size: 30, color: faint}
+	c.footer([]span{{st, count}, {sep, "  ·  "}, {st, read}})
 	return c.png()
 }
 
 // Unavailable renders the card for a share link that expired (gone=true) or never existed.
 func Unavailable(gone bool) ([]byte, error) {
-	c, err := newCanvas()
+	c, err := noteSheet(0.08)
 	if err != nil {
 		return nil, err
 	}
-	c.glow(Width-140, 60, 260, 0.06, accent)
-	c.wordmark(pad, pad+44, 56, false)
-
 	title, sub := "This note isn’t here.", "The link may be incomplete, or the note was removed."
 	if gone {
 		title, sub = "This note has faded.", "It was shared with an expiry, and that time has passed."
 	}
-	t := style{face: c.face(c.f.serifItalic), size: 92, color: muted, tracking: -0.015}
-	c.ts.draw(c.img, t, title, pad, 212+92*0.8)
-	s := style{face: c.face(c.f.sans), size: 29, color: faint}
-	c.ts.draw(c.img, s, sub, pad, 212+92*0.8+26+29*1.55)
-	c.footer("blank.achraf.tn", "write your own →")
+	t := style{face: c.face(c.f.serifItalic), size: 84, color: muted, tracking: -0.015}
+	y := float32(190) + 84*0.8
+	c.ts.draw(c.img, t, title, noteLeft, y)
+	s := style{face: c.face(c.f.sans), size: 28, color: faint}
+	c.ts.draw(c.img, s, sub, noteLeft, y+64)
+	if gone {
+		c.ghostLines(noteLeft, float64(y)+122, noteMaxW, 2, 0.55)
+	}
+	cta := style{face: c.face(c.f.sansMedium), size: 28, color: accent}
+	c.footer([]span{{cta, "Write your own →"}})
 	return c.png()
 }
