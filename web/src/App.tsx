@@ -412,8 +412,9 @@ export default function App() {
           return;
         }
       }
-      if (e.key === "Escape" && focusMode) {
-        setFocusMode(false);
+      if (e.key === "Escape" && !e.isComposing && target.tagName !== "INPUT" && (active || focusMode)) {
+        e.preventDefault();
+        setFocusMode((f) => !f);
         return;
       }
       if (!inField && e.key === "/") {
@@ -469,7 +470,7 @@ export default function App() {
       );
     }
     a.push(
-      { id: "focus", group: "Actions", label: focusMode ? "Exit focus mode" : "Enter focus mode", icon: <IFocus size={14} />, shortcut: `${HOT} F`, keywords: "zen distraction", run: () => setFocusMode((f) => !f) },
+      { id: "focus", group: "Actions", label: focusMode ? "Exit focus mode" : "Enter focus mode", icon: <IFocus size={14} />, shortcut: "Esc", keywords: "zen distraction", run: () => setFocusMode((f) => !f) },
       { id: "theme", group: "Actions", label: theme === "dark" ? "Switch to light" : "Switch to dark", icon: theme === "dark" ? <ISun size={14} /> : <IMoon size={14} />, shortcut: `${HOT} T`, keywords: "theme mode night day appearance", run: () => toggleTheme() },
       { id: "sidebar", group: "Actions", label: sidebar ? "Hide sidebar" : "Show sidebar", icon: <ISidebar size={14} />, shortcut: `${HOT} B`, run: () => setSidebar((s) => !s) },
       { id: "backup", group: "Actions", label: "Back up all notes", hint: "Download a .json file", icon: <IDownload size={14} />, keywords: "export backup json", run: exportAll },
@@ -615,7 +616,7 @@ export default function App() {
                   <>
                     <button
                       onClick={() => setFocusMode((f) => !f)}
-                      title={`Focus mode (${HOT} F)`}
+                      title="Focus mode (Esc)"
                       aria-label={focusMode ? "Exit focus mode" : "Enter focus mode"}
                       className={cn(
                         "grid h-9 w-9 place-items-center rounded-full transition-all hover:bg-ink/5 active:scale-90",

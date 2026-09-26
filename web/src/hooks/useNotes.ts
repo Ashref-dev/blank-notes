@@ -12,7 +12,7 @@ function load(): Note[] {
 
 const byRecent = (a: Note, b: Note) => {
   if (!!a.pinned !== !!b.pinned) return a.pinned ? -1 : 1;
-  return b.updatedAt - a.updatedAt;
+  return b.createdAt - a.createdAt;
 };
 
 function initialActive(): string | null {

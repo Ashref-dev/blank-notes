@@ -11,7 +11,7 @@ A modern, elegant note-taking application with a local-first approach. Built wit
 - **Local-First Storage**: Notes saved instantly to browser localStorage - no network delays
 - **Minimalist Interface**: Clean, distraction-free writing environment with generous spacing
 - **Instant Auto-save**: Notes are saved immediately as you type (no 2-second delays)
-- **Note Organization**: Sidebar with all your notes, sorted by last modified
+- **Note Organization**: Sidebar with all your notes, newest first by creation date, with the last edit shown on each row
 - **Optional Cloud Sharing**: Generate shareable links with configurable expiration times
 - **Dark Mode**: Toggle between light and dark themes (saved in localStorage)
 - **Download**: Export notes as .txt or .md files
@@ -136,7 +136,7 @@ CREATE TABLE shared_notes (
 4. The first line automatically becomes the note title
 
 ### Organizing Notes
-- All notes appear in the sidebar, sorted by last modified
+- All notes appear in the sidebar, newest first by creation date, with the last edit shown on each row
 - Click any note in the sidebar to switch to it
 - Delete notes using the trash icon in the sidebar
 - Notes persist between browser sessions via localStorage
@@ -158,7 +158,7 @@ App shortcuts use `⌃⌥` (Control+Option) on macOS and `Ctrl+Alt` elsewhere, s
 - `⌘K` / `Ctrl+K`: Command bar (every action: share, copy, export, import, backup, print, theme…)
 - `⌃⌥N`: New note
 - `⌃⌥B`: Toggle sidebar (or click the sidebar's edge)
-- `⌃⌥F`: Focus mode (`Esc` to exit)
+- `Esc` (or `⌃⌥F`): Toggle focus mode
 - `⌃⌥S`: Share the current note
 - `⌃⌥T`: Toggle light/dark theme
 - `/`: Search notes

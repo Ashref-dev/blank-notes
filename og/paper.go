@@ -47,6 +47,19 @@ func (c *canvas) dots(spacing int) {
 	}
 }
 
+// rules draws notebook ruling: hairlines every gap px through baseline, and a vertical margin line at marginX.
+func (c *canvas) rules(baseline, gap, marginX float64) {
+	for y := math.Mod(baseline, gap); y < Height; y += gap {
+		for x := 0; x < Width; x++ {
+			c.blend(x, int(y), line, 0.9)
+		}
+	}
+	for y := 0; y < Height; y++ {
+		c.blend(int(marginX), y, accent, 0.28)
+		c.blend(int(marginX)+1, y, accent, 0.14)
+	}
+}
+
 // rectCoverage is how much of a Gaussian-blurred span [-half, half] covers u.
 func rectCoverage(u, half, sigma float64) float64 {
 	k := 1 / (sigma * math.Sqrt2)

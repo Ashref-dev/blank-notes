@@ -60,9 +60,9 @@ export function groupOf(n: Note, now = Date.now()) {
   const start = new Date(now);
   start.setHours(0, 0, 0, 0);
   const t = start.getTime();
-  if (n.updatedAt >= t) return "Today";
-  if (n.updatedAt >= t - 86400000) return "Yesterday";
-  if (n.updatedAt >= t - 86400000 * 6) return "This week";
+  if (n.createdAt >= t) return "Today";
+  if (n.createdAt >= t - 86400000) return "Yesterday";
+  if (n.createdAt >= t - 86400000 * 6) return "This week";
   return "Earlier";
 }
 

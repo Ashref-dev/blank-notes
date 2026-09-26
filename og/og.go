@@ -175,39 +175,43 @@ func (c *canvas) png() ([]byte, error) {
 
 func deg(d float64) float64 { return d * math.Pi / 180 }
 
-// Site renders the default card for blank.achraf.tn: a small stack of paper on a dotted desk, the
-// wordmark with its cursor, and "thoughts" selected the way the editor highlights text.
+// Site renders the default card for blank.achraf.tn: a ruled notebook page with a giant wordmark written
+// on one line and the tagline on the next, "thoughts" selected the way the editor highlights text.
 func Site() ([]byte, error) {
 	c, err := newCanvas()
 	if err != nil {
 		return nil, err
 	}
-	c.dots(24)
-	c.glow(Width*0.8, Height*0.14, 250, 0.2, accent)
-	c.glow(Width*0.12, Height*0.98, 190, 0.08, accent)
+	const left, markBase, tagBase, gap = 104, 436.0, 552.0, 58.0
+	c.glow(Width-60, 20, 300, 0.2, accent)
+	c.glow(Width*0.45, Height*0.62, 260, 0.06, accent)
+	c.rules(tagBase, gap, 64)
 
-	const cx, cy, w, h = Width / 2, 292.0, 880.0, 400.0
-	c.sheet(cx-10, cy+10, w, h, deg(-3.4), sheetBack)
-	c.sheet(cx+8, cy+4, w, h, deg(2.2), sheetBack)
-	c.sheet(cx, cy, w, h, 0, sheetFill)
+	m := style{face: c.face(c.f.mono), size: 18, color: muted, tracking: 0.16}
+	top := float32(tagBase - gap*8)
+	c.ts.draw(c.img, m, "BLANK.ACHRAF.TN", left, top-12)
+	tag := "LOCAL-FIRST NOTES"
+	c.ts.draw(c.img, m, tag, Width-left-c.ts.width(m, tag), top-12)
 
-	const size = 184
-	c.wordmark((Width-c.wordmarkWidth(size, true))/2, 312, size, true)
+	size := float32(420)
+	if w := c.wordmarkWidth(size, true); w > Width-left*2 {
+		size *= (Width - left*2) / w
+	}
+	c.wordmark(left-size*0.02, markBase, size, true)
 
-	a := style{face: c.face(c.f.sans), size: 34, color: muted}
-	b := style{face: c.face(c.f.sans), size: 34, color: ink}
+	a := style{face: c.face(c.f.sans), size: 40, color: muted}
+	b := style{face: c.face(c.f.sans), size: 40, color: ink}
 	pre, word := span{a, "A quiet place for your "}, span{b, "thoughts"}
-	line := []span{pre, word, {a, "."}}
-	x, y := (Width-c.spansWidth(line))/2, float32(400)
+	x, y := float32(left), float32(tagBase)-12
 	sx, sw := float64(x+c.ts.width(a, pre.text)), float64(c.ts.width(b, word.text))
 	c.fill(selection, func(ad rasterx.Adder) {
-		roundRectPath(ad, sx+sw/2, float64(y)-34*0.34, sw+10, 34*1.32, 5, 0)
+		roundRectPath(ad, sx+sw/2, float64(y)-40*0.34, sw+12, 40*1.32, 6, 0)
 	})
-	c.drawSpans(line, x, y)
+	c.drawSpans([]span{pre, word, {a, "."}}, x, y)
 
-	m := style{face: c.face(c.f.mono), size: 19, color: faint, tracking: 0.14}
-	label := "BLANK.ACHRAF.TN"
-	c.ts.draw(c.img, m, label, (Width-c.ts.width(m, label))/2, 588)
+	cta := style{face: c.face(c.f.sansMedium), size: 30, color: accent}
+	go_ := "Just start typing →"
+	c.ts.draw(c.img, cta, go_, Width-left-c.ts.width(cta, go_), y)
 	return c.png()
 }
 

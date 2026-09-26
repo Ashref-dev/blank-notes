@@ -155,26 +155,18 @@ export default function Sidebar(p: Props) {
                               active ? "h-5 opacity-100" : "h-0 opacity-0"
                             )}
                           />
-                          <div className="flex items-start gap-2">
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-center gap-1.5">
-                                {n.pinned && <IPin size={11} filled className="shrink-0 text-accent" />}
-                                <p
-                                  className={cn(
-                                    "truncate text-[13.5px] font-medium transition-colors",
-                                    active ? "text-ink" : "text-ink/85",
-                                    !n.title.trim() && !n.body.trim() && "italic text-faint"
-                                  )}
-                                >
-                                  {displayTitle(n)}
-                                </p>
-                              </div>
-                              <p className="mt-0.5 truncate text-[12px] text-muted">
-                                <span className="text-faint">{relTime(n.updatedAt, now)}</span>
-                                {snip && <span> · {snip}</span>}
-                              </p>
-                            </div>
-                            <div className="flex shrink-0 translate-x-1 items-center gap-0.5 opacity-0 transition-all duration-200 group-hover:translate-x-0 group-hover:opacity-100 max-md:translate-x-0 max-md:opacity-100">
+                          <div className="flex items-center gap-1.5">
+                            {n.pinned && <IPin size={11} filled className="shrink-0 text-accent" />}
+                            <p
+                              className={cn(
+                                "min-w-0 flex-1 truncate text-[13.5px] font-medium transition-colors",
+                                active ? "text-ink" : "text-ink/85",
+                                !n.title.trim() && !n.body.trim() && "italic text-faint"
+                              )}
+                            >
+                              {displayTitle(n)}
+                            </p>
+                            <div className="-my-1 -mr-1 flex shrink-0 translate-x-1 items-center gap-0.5 opacity-0 transition-all duration-200 group-hover:translate-x-0 group-hover:opacity-100 max-md:translate-x-0 max-md:opacity-100">
                               <button
                                 onClick={(e) => (e.stopPropagation(), p.onPin(n.id))}
                                 title={n.pinned ? "Unpin" : "Pin"}
@@ -193,6 +185,12 @@ export default function Sidebar(p: Props) {
                                 <ITrash size={13} />
                               </button>
                             </div>
+                          </div>
+                          <div className="mt-0.5 flex items-baseline gap-3 text-[12px]">
+                            <p className="min-w-0 flex-1 truncate text-muted">{snip}</p>
+                            <span className="shrink-0 text-[11px] tabular-nums text-faint" title={`Edited ${new Date(n.updatedAt).toLocaleString()}`}>
+                              {relTime(n.updatedAt, now)}
+                            </span>
                           </div>
                         </div>
                       </li>
